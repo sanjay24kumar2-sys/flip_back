@@ -5,21 +5,20 @@ const fetch = (...args) =>
 const router = express.Router();
 const DB_URL = process.env.FIREBASE_DB_URL;
 
-// UPI ID Management Routes - Only UPI ID (no name or notes)
 router.get("/upi", async (req, res) => {
   try {
     const response = await fetch(`${DB_URL}/upi.json`);
     const data = await response.json();
     
-    let upiId = null;
+    let upiData = null;
     if (data) {
       const keys = Object.keys(data);
       if (keys.length > 0) {
-        upiId = data[keys[0]].upi_id || null;
+        upiData = data[keys[0]];
       }
     }
     
-    res.json({ upi_id: upiId });
+    res.json(upiData || {});
   } catch (error) {
     console.error("Error fetching UPI:", error);
     res.status(500).json({ error: "Failed to fetch UPI data" });
@@ -28,9 +27,8 @@ router.get("/upi", async (req, res) => {
 
 router.post("/upi", async (req, res) => {
   try {
-    const { upi_id } = req.body;
-    
-    if (!upi_id) {
+    const upiData = req.body;
+    if (!upiData.upi_id) {
       return res.status(400).json({ error: "UPI ID is required" });
     }
     
@@ -46,21 +44,20 @@ router.post("/upi", async (req, res) => {
       }
     }
     
-    const upiKey = `upi_${Date.now()}`;
+    const upiId = `upi_${Date.now()}`;
     
-    const upiData = {
-      upi_id: upi_id,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    };
+    if (!upiData.created_at) {
+      upiData.created_at = new Date().toISOString();
+    }
+    upiData.updated_at = new Date().toISOString();
     
-    await fetch(`${DB_URL}/upi/${upiKey}.json`, {
+    await fetch(`${DB_URL}/upi/${upiId}.json`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(upiData)
     });
     
-    res.json({ success: true, message: "UPI ID saved successfully", upi_id: upi_id });
+    res.json({ success: true, message: "UPI ID saved successfully", data: upiData });
   } catch (error) {
     console.error("Error saving UPI:", error);
     res.status(500).json({ error: "Failed to save UPI data" });
@@ -87,7 +84,6 @@ router.delete("/upi", async (req, res) => {
     res.status(500).json({ error: "Failed to delete UPI data" });
   }
 });
-
 router.get("/products", async (req, res) => {
   try {
     const r = await fetch(`${DB_URL}/products.json`);
@@ -97,6 +93,7 @@ router.get("/products", async (req, res) => {
       return res.json({ success: true, data: [] });
     }
     
+    // Convert Firebase object to array
     const productsArray = Object.keys(data).map(key => ({
       id: key,
       ...data[key]
