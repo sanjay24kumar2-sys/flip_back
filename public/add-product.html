@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Admin – Add Product</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:Arial}
+body{min-height:100vh;background:#f1f3f6;display:flex;flex-direction:column;align-items:center}
+.header{width:100%;background:#2874f0;color:#fff;padding:18px;font-size:22px;font-weight:bold;text-align:center}
+.card{width:100%;max-width:460px;background:#fff;margin:30px 16px;padding:26px;border-radius:18px;box-shadow:0 8px 22px rgba(0,0,0,.15)}
+.group{margin-bottom:15px}
+label{font-size:13px;font-weight:600;color:#555;display:block;margin-bottom:6px}
+input,textarea,select{width:100%;padding:13px;border-radius:12px;border:1px solid #ccc;font-size:14px}
+textarea{resize:none;height:90px}
+.status{font-size:12px;color:#2e7d32;margin-top:6px;font-weight:bold}
+.price-box{display:flex;gap:10px}
+.final-price{font-size:14px;font-weight:bold;color:#2e7d32;margin-top:6px}
+.images-container{margin-top:20px;border-top:1px solid #eee;padding-top:20px}
+.images-title{font-size:16px;font-weight:bold;color:#2874f0;margin-bottom:15px;text-align:center}
+.images-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+.image-slot{position:relative;height:120px;border:2px dashed #ddd;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#f8f9fa;cursor:pointer}
+.image-slot.main{border-color:#2874f0;background:#e8f0fe}
+.image-slot.main .slot-label{color:#2874f0}
+.image-slot.filled{border-style:solid;border-color:#4caf50}
+.slot-label{font-size:12px;font-weight:bold;color:#666;margin-top:5px}
+.image-slot img{width:100%;height:100%;object-fit:cover;border-radius:8px}
+.remove-btn{position:absolute;top:5px;right:5px;background:rgba(255,0,0,0.8);color:white;border:none;border-radius:50%;width:20px;height:20px;font-size:12px;cursor:pointer;display:none}
+.image-slot:hover .remove-btn{display:block}
+.buttons-container{display:flex;gap:10px;margin-top:25px}
+.btn-save{flex:2;padding:15px;background:#2874f0;color:#fff;border:none;font-size:16px;font-weight:bold;border-radius:14px;cursor:pointer}
+.btn-view{flex:1;padding:15px;background:#34a853;color:#fff;border:none;font-size:16px;font-weight:bold;border-radius:14px;cursor:pointer}
+.success-message{background:#4caf50;color:white;padding:12px;border-radius:10px;margin-top:15px;display:none;text-align:center;font-size:14px}
+.error-message{background:#f44336;color:white;padding:12px;border-radius:10px;margin-top:15px;display:none;text-align:center;font-size:14px}
+</style>
+</head>
+
+<body>
+<div class="header">Admin Dashboard</div>
+
+<div class="card">
+<h2>Add New Product</h2>
+
+<div id="successMessage" class="success-message">
+  ✅ Product added successfully!
+</div>
+
+<div id="errorMessage" class="error-message">
+  ❌ Error saving product!
+</div>
+
+<div class="group">
+<label>Product Name *</label>
+<input id="name" placeholder="Enter product name" required>
+</div>
+
+<div class="group">
+<label>Category</label>
+<select id="category">
+  <option value="">Select Category</option>
+  <option value="electronics">Electronics</option>
+  <option value="fashion">Fashion</option>
+  <option value="home">Home & Kitchen</option>
+  <option value="beauty">Beauty</option>
+  <option value="sports">Sports</option>
+</select>
+</div>
+
+<div class="group">
+<label>Description *</label>
+<textarea id="description" placeholder="Enter product description" required></textarea>
+</div>
+
+<div class="group">
+<label>Price *</label>
+<div class="price-box">
+<input id="price" type="number" placeholder="Price ₹" required>
+<input id="off" type="number" placeholder="Off %" min="0" max="100" value="0">
+</div>
+<div class="final-price" id="finalPrice">Final Price ₹0</div>
+</div>
+
+<div class="group">
+<label>Stock Quantity</label>
+<input id="stock" type="number" placeholder="Available quantity" min="0" value="1">
+</div>
+
+<div class="images-container">
+<div class="images-title">Upload All 5 Images (1 Main + 4 Extra)</div>
+<div class="images-grid" id="imagesGrid">
+  <!-- Main Image Slot -->
+  <div class="image-slot main" onclick="triggerMainImage()">
+    <div style="font-size:24px;color:#2874f0"></div>
+    <div class="slot-label">Main</div>
+    <input type="file" id="mainImage" accept="image/*" style="display:none">
+  </div>
+  
+  <!-- Extra Image Slots -->
+  <div class="image-slot" onclick="triggerExtraImage(0)">
+    <div style="font-size:24px;color:#666">🖼️</div>
+    <div class="slot-label">Extra 1</div>
+  </div>
+  <div class="image-slot" onclick="triggerExtraImage(1)">
+    <div style="font-size:24px;color:#666">🖼️</div>
+    <div class="slot-label">Extra 2</div>
+  </div>
+  <div class="image-slot" onclick="triggerExtraImage(2)">
+    <div style="font-size:24px;color:#666">🖼️</div>
+    <div class="slot-label">Extra 3</div>
+  </div>
+  <div class="image-slot" onclick="triggerExtraImage(3)">
+    <div style="font-size:24px;color:#666">🖼️</div>
+    <div class="slot-label">Extra 4</div>
+  </div>
+</div>
+<div class="status" id="uploadStatus"></div>
+</div>
+
+<!-- ONLY 2 BUTTONS -->
+<div class="buttons-container">
+<button class="btn-save" onclick="addProduct()"> Save Product</button>
+<button class="btn-view" onclick="viewProducts()"> View Products</button>
+</div>
+</div>
+
+<script>
+// API Base URL - Yahan apna server URL daal dena
+const API_BASE_URL = 'http://localhost:3000/api'; // Change this to your actual backend URL
+
+// Price calculation
+const priceInput = document.getElementById("price");
+const offInput = document.getElementById("off");
+const finalPriceText = document.getElementById("finalPrice");
+const successMessage = document.getElementById("successMessage");
+const errorMessage = document.getElementById("errorMessage");
+
+priceInput.oninput = offInput.oninput = () => {
+  const p = Number(priceInput.value||0);
+  const o = Number(offInput.value||0);
+  const final = p - p*o/100;
+  finalPriceText.innerText = "Final Price ₹" + final.toFixed(2);
+};
+
+// Store all images
+const allImages = {
+  main: null,
+  extra: [null, null, null, null]
+};
+
+// Main image upload
+function triggerMainImage() {
+  document.getElementById('mainImage').click();
+}
+
+document.getElementById('mainImage').onchange = function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  
+  const reader = new FileReader();
+  reader.onload = function(event) {
+    const mainSlot = document.querySelector('.image-slot.main');
+    mainSlot.innerHTML = `
+      <img src="${event.target.result}" alt="Main product image">
+      <button class="remove-btn" onclick="removeMainImage(event)">×</button>
+    `;
+    mainSlot.classList.add('filled');
+    
+    allImages.main = file;
+    updateUploadStatus();
+  };
+  reader.readAsDataURL(file);
+};
+
+// Extra images upload
+function triggerExtraImage(index) {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  
+  input.onchange = function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = function(event) {
+      const extraSlots = document.querySelectorAll('.image-slot:not(.main)');
+      extraSlots[index].innerHTML = `
+        <img src="${event.target.result}" alt="Extra product image ${index + 1}">
+        <button class="remove-btn" onclick="removeExtraImage(event, ${index})">×</button>
+      `;
+      extraSlots[index].classList.add('filled');
+      
+      allImages.extra[index] = file;
+      updateUploadStatus();
+    };
+    reader.readAsDataURL(file);
+  };
+  
+  input.click();
+}
+
+// Remove functions
+function removeMainImage(event) {
+  event.stopPropagation();
+  const mainSlot = document.querySelector('.image-slot.main');
+  mainSlot.innerHTML = `
+    <div style="font-size:24px;color:#2874f0"></div>
+    <div class="slot-label">Main Image</div>
+    <input type="file" id="mainImage" accept="image/*" style="display:none">
+  `;
+  mainSlot.classList.remove('filled');
+  
+  allImages.main = null;
+  document.getElementById('mainImage').value = '';
+  updateUploadStatus();
+}
+
+function removeExtraImage(event, index) {
+  event.stopPropagation();
+  const extraSlots = document.querySelectorAll('.image-slot:not(.main)');
+  extraSlots[index].innerHTML = `
+    <div style="font-size:24px;color:#666">🖼️</div>
+    <div class="slot-label">Extra ${index + 1}</div>
+  `;
+  extraSlots[index].classList.remove('filled');
+  
+  allImages.extra[index] = null;
+  updateUploadStatus();
+}
+
+// Update upload status
+function updateUploadStatus() {
+  const mainUploaded = allImages.main !== null;
+  const extraUploaded = allImages.extra.filter(img => img !== null).length;
+  const totalUploaded = (mainUploaded ? 1 : 0) + extraUploaded;
+  
+  const status = document.getElementById('uploadStatus');
+  status.innerHTML = `📁 Uploaded: ${totalUploaded}/5 images`;
+  
+  if (totalUploaded === 5) {
+    status.innerHTML = "✅ All 5 images uploaded successfully!";
+    status.style.color = "#2e7d32";
+  } else if (totalUploaded > 0) {
+    status.style.color = "#ff9800";
+  } else {
+    status.innerHTML = "";
+  }
+}
+
+// Show message function
+function showMessage(element, message) {
+  element.innerHTML = message;
+  element.style.display = 'block';
+  element.scrollIntoView({ behavior: 'smooth' });
+  
+  setTimeout(() => {
+    element.style.display = 'none';
+  }, 5000);
+}
+
+// ✅ ID GENERATE KARNE KA FUNCTION
+function generateProductId() {
+  // Timestamp + Random number combination
+  const timestamp = Date.now().toString(36); // Base36 timestamp
+  const random = Math.random().toString(36).substr(2, 6); // Random string
+  const category = document.getElementById('category').value;
+  
+  // Category prefix agar category select hai
+  let categoryPrefix = 'GEN';
+  if (category) {
+    categoryPrefix = category.substring(0, 3).toUpperCase();
+  }
+  
+  // Format: CAT-XXX-YYYYYY (e.g., ELE-ABC123-DEF456)
+  return `${categoryPrefix}-${timestamp.toUpperCase()}-${random.toUpperCase()}`;
+}
+
+// Helper function to convert to base64
+function toBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+// ✅ UPDATED: Add product function with ID generation
+async function addProduct() {
+  // Hide messages
+  successMessage.style.display = 'none';
+  errorMessage.style.display = 'none';
+  
+  // Validate form
+  const name = document.getElementById('name').value.trim();
+  const price = document.getElementById('price').value;
+  const description = document.getElementById('description').value.trim();
+  const category = document.getElementById('category').value;
+  const stock = document.getElementById('stock').value || 1;
+  const off = document.getElementById('off').value || 0;
+  
+  if (!name) {
+    alert("Please enter product name");
+    document.getElementById('name').focus();
+    return;
+  }
+  
+  if (!price || Number(price) <= 0) {
+    alert("Please enter valid price");
+    document.getElementById('price').focus();
+    return;
+  }
+  
+  if (!description) {
+    alert("Please enter product description");
+    document.getElementById('description').focus();
+    return;
+  }
+  
+  if (!category) {
+    alert("Please select a category");
+    document.getElementById('category').focus();
+    return;
+  }
+  
+  // Check if all 5 images are uploaded
+  if (!allImages.main) {
+    alert("Please upload main image");
+    triggerMainImage();
+    return;
+  }
+  
+  const uploadedExtras = allImages.extra.filter(img => img !== null).length;
+  if (uploadedExtras < 4) {
+    alert(`Please upload all 4 extra images. Currently uploaded: ${uploadedExtras}/4`);
+    return;
+  }
+
+  // Show loading
+  const saveBtn = document.querySelector('.btn-save');
+  const originalText = saveBtn.textContent;
+  saveBtn.textContent = "Saving...";
+  saveBtn.disabled = true;
+
+  try {
+    // Convert images to base64
+    const mainImageBase64 = await toBase64(allImages.main);
+    const extraImagesBase64 = await Promise.all(
+      allImages.extra.map(img => img ? toBase64(img) : '')
+    );
+
+    // ✅ ID GENERATE KARO YAHAN
+    const productId = generateProductId();
+    
+    // ✅ Product data with ID
+    const productData = {
+      id: productId,  // ✅ YAHAN ID ADD KI HAI
+      name: name,
+      description: description,
+      price: Number(price),
+      discount: Number(off),
+      category: category,
+      stock: Number(stock),
+      status: "active",
+      main_image: mainImageBase64,
+      extra_images: extraImagesBase64,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+
+    console.log("🟢 Sending product data with ID:", productId);
+    console.log("📦 Full data:", productData);
+
+    // Send to backend API
+    const response = await fetch(`${API_BASE_URL}/products`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(productData)
+    });
+
+    const result = await response.json();
+
+    if (response.ok && result.success) {
+      // Show success message with ID
+      showMessage(successMessage, `✅ Product "${name}" saved successfully!<br><small>ID: ${productId}</small>`);
+      
+      console.log("✅ Product saved to database:", result);
+      
+      // Ask user if they want to reset form
+      setTimeout(() => {
+        const choice = confirm(`Product added successfully!\n\nProduct ID: ${productId}\n\nClick OK to reset form and add another product\nClick Cancel to stay on this page`);
+        
+        if (choice) {
+          resetForm();
+        }
+      }, 1000);
+    } else {
+      throw new Error(result.message || 'Failed to save product');
+    }
+    
+  } catch (error) {
+    console.error("❌ Error saving product:", error);
+    showMessage(errorMessage, `❌ Error: ${error.message}`);
+    alert("Error saving product to database. Please check:\n1. Backend server is running\n2. API endpoint is correct\n3. Check console for details");
+  } finally {
+    // Restore button
+    saveBtn.textContent = originalText;
+    saveBtn.disabled = false;
+  }
+}
+
+// ✅ UPDATED: Reset form function
+function resetForm() {
+  // Clear all inputs
+  document.getElementById('name').value = '';
+  document.getElementById('description').value = '';
+  document.getElementById('price').value = '';
+  document.getElementById('off').value = '0';
+  document.getElementById('category').value = '';
+  document.getElementById('stock').value = '1';
+  finalPriceText.innerText = "Final Price ₹0";
+  successMessage.style.display = 'none';
+  errorMessage.style.display = 'none';
+  
+  removeMainImage({stopPropagation: () => {}});
+  
+  for (let i = 0; i < 4; i++) {
+    const extraSlots = document.querySelectorAll('.image-slot:not(.main)');
+    extraSlots[i].innerHTML = `
+      <div style="font-size:24px;color:#666"></div>
+      <div class="slot-label">Extra ${i + 1}</div>
+    `;
+    extraSlots[i].classList.remove('filled');
+    allImages.extra[i] = null;
+  }
+  
+  document.getElementById('uploadStatus').innerHTML = "";
+  
+  // Focus on name field
+  setTimeout(() => {
+    document.getElementById('name').focus();
+  }, 100);
+}
+
+// Function to view products
+function viewProducts() {
+  // You can change this to your products listing page
+  window.location.href = "product-list.html";
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', function(e) {
+  // Ctrl + S to save
+  if (e.ctrlKey && e.key === 's') {
+    e.preventDefault();
+    addProduct();
+  }
+  // Ctrl + R to reset
+  else if (e.ctrlKey && e.key === 'r') {
+    e.preventDefault();
+    resetForm();
+  }
+
+  else if (e.ctrlKey && e.key === 'v') {
+    e.preventDefault();
+    viewProducts();
+  }
+});
+
+window.addEventListener('load', () => {
+  document.getElementById('name').focus();
+});
+
+function initializeProductCounter() {
+  if (!localStorage.getItem('productCounter')) {
+    localStorage.setItem('productCounter', '1000');
+  }
+}
+initializeProductCounter();
+</script>
+</body>
+</html>
