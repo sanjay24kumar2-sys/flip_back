@@ -80,8 +80,7 @@ router.post("/upi", async (req, res) => {
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
-    
-    // Use a fixed key "current" for UPI ID
+    ,
     await fetch(`${DB_URL}/upi/current.json`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
