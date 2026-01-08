@@ -130,20 +130,10 @@ input,select{width:100%;padding:13px;border-radius:12px;border:1px solid #ccc;fo
 <script>
 
 function getAPIBaseURL() {
-    if (window.ENV && window.ENV.API_URL) {
+    if (window.ENV?.API_URL) {
         return window.ENV.API_URL;
     }
-    
-    const currentHost = window.location.hostname;
-    
-    if (currentHost === 'localhost' || currentHost === '127.0.0.1' || currentHost === '') {
-        // .env se PORT 3000 hai
-        return 'http://localhost:3000/api';
-    }
-    
-    // Production - tumhara actual domain
-    const currentOrigin = window.location.origin;
-    return `${currentOrigin}/api`;
+    return '/api';
 }
 
 const API_BASE_URL = getAPIBaseURL();
