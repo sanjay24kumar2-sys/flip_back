@@ -30,11 +30,6 @@ router.delete("/products/:id", async (req, res) => {
   res.json({ success: true });
 });
 
-<<<<<<< HEAD
-=======
-
-// Get UPI ID
->>>>>>> a0a488ec80fa2aede3358a5aa58bef7c51a3555c
 router.get("/upi", async (req, res) => {
   try {
     const r = await fetch(`${DB_URL}/upi.json`);
@@ -80,7 +75,8 @@ router.post("/upi", async (req, res) => {
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
-    ,
+    
+    // Use a fixed key "current" for UPI ID
     await fetch(`${DB_URL}/upi/current.json`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -121,9 +117,4 @@ router.delete("/upi", async (req, res) => {
   }
 });
 
-<<<<<<< HEAD
 module.exports = router;
-=======
-
-module.exports = router;
->>>>>>> a0a488ec80fa2aede3358a5aa58bef7c51a3555c
