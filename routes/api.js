@@ -31,7 +31,6 @@ router.delete("/products/:id", async (req, res) => {
   res.json({ success: true });
 });
 
-/* UPI */
 router.get("/upi", async (req, res) => {
   const r = await fetch(`${DB_URL}/upi/current.json`);
   const data = await r.json();
