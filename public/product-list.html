@@ -2,86 +2,176 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Admin – Product Dashboard</title>
+<title>Admin - Product Dashboard</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
-*{margin:0;padding:0;box-sizing:border-box;font-family:Arial,sans-serif}
-body{background:#f0f2f5;font-size:14px}
-.header{background:#2874f0;color:#fff;padding:15px}
-.header-content{display:flex;flex-direction:column;gap:10px}
+*{margin:0;padding:0;box-sizing:border-box;font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif}
+body{background:#f5f7fa;font-size:14px;color:#333}
+
+/* Header */
+.header{background:linear-gradient(135deg, #2c3e50 0%, #4a6572 100%);color:#fff;padding:15px}
+.header-content{max-width:1200px;margin:0 auto;display:flex;flex-direction:column;gap:15px}
 .header-title{font-size:20px;font-weight:600;text-align:center}
-.header-actions{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
-.btn{background:#fff;color:#2874f0;text-decoration:none;padding:8px 15px;border-radius:5px;font-weight:600;border:none;cursor:pointer;font-size:14px}
-.btn-add{background:#2e7d32;color:#fff}
-.btn-upi{background:#7b1fa2;color:#fff}
-.btn:hover{opacity:0.9;transform:translateY(-1px)}
+.header-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.btn{background:#fff;color:#2c3e50;text-decoration:none;padding:10px 18px;border-radius:6px;font-weight:600;border:none;cursor:pointer;font-size:14px;transition:all 0.3s;box-shadow:0 2px 4px rgba(0,0,0,0.1)}
+.btn-add{background:#27ae60;color:#fff}
+.btn-upi{background:#8e44ad;color:#fff}
+.btn:hover{opacity:0.9;transform:translateY(-1px);box-shadow:0 4px 8px rgba(0,0,0,0.15)}
 
-.container{margin:15px;padding:0}
-.search-box{margin-bottom:15px}
-.search-input{width:100%;padding:12px 15px;border:1px solid #ddd;border-radius:8px;font-size:14px;background:#fff}
-.search-input:focus{outline:none;border-color:#2874f0;box-shadow:0 0 0 2px rgba(40,116,240,0.2)}
+/* Container */
+.container{max-width:1200px;margin:20px auto;padding:0 15px}
 
-.stats{display:flex;gap:12px;margin-bottom:20px;justify-content:center}
-.stat-card{background:#fff;padding:15px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);text-align:center;flex:1;max-width:200px}
-.stat-value{font-size:22px;font-weight:bold;color:#2874f0;margin-bottom:5px}
-.stat-label{color:#666;font-size:12px}
+/* Search */
+.search-box{margin-bottom:20px}
+.search-input{width:100%;padding:12px 15px;border:1px solid #ddd;border-radius:6px;font-size:14px;background:#fff;padding-left:40px}
+.search-input:focus{outline:none;border-color:#3498db;box-shadow:0 0 0 2px rgba(52,152,219,0.2)}
 
-.products-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:20px}
-.product-card{ padding: auto;background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 2px 6px rgba(0,0,0,0.1);transition:transform 0.3s}
-.product-card:hover{transform:translateY(-3px);box-shadow:0 4px 12px rgba(0,0,0,0.15)}
-.product-image{width:100%;height:150px;object-fit:cover;border-bottom:1px solid #eee}
-.product-content{padding:12px}
-.product-name{font-weight:600;font-size:14px;color:#333;margin-bottom:8px;line-height:1.3;height:36px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
-.product-price{color:#2e7d32;font-weight:bold;font-size:16px;margin-bottom:5px}
-.product-discount{color:#f44336;font-size:12px;margin-bottom:10px}
-.product-actions{display:flex;gap:6px;margin-top:12px}
-.action-btn{padding:6px 10px;border:none;border-radius:4px;font-size:11px;cursor:pointer;font-weight:500;flex:1;text-align:center}
-.edit-btn{background:#e8f5e9;color:#2e7d32}
-.delete-btn{background:#ffebee;color:#d32f2f}
+/* Stats */
+.stats{display:grid;grid-template-columns:repeat(2, 1fr);gap:15px;margin-bottom:25px}
+.stat-card{background:#fff;padding:20px;border-radius:8px;box-shadow:0 3px 10px rgba(0,0,0,0.08);border-left:4px solid #3498db}
+.stat-value{font-size:24px;font-weight:700;color:#2c3e50;margin-bottom:5px}
+.stat-label{color:#7f8c8d;font-size:13px;font-weight:500}
 
-.empty-state{text-align:center;padding:40px 15px;color:#666;background:#fff;border-radius:8px;grid-column:span 2}
-.empty-title{font-size:18px;margin-bottom:8px;color:#333}
-.empty-text{font-size:14px;color:#999;margin-bottom:20px}
+/* Products Grid */
+.products-grid{display:grid;grid-template-columns:repeat(auto-fill, minmax(280px, 1fr));gap:20px;margin-bottom:30px}
+.product-card{background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 3px 10px rgba(0,0,0,0.08);border:1px solid #eee;transition:all 0.3s}
+.product-card:hover{box-shadow:0 5px 15px rgba(0,0,0,0.1)}
+.product-image-container{position:relative;height:180px;overflow:hidden;background:#f8f9fa}
+.product-image{width:100%;height:100%;object-fit:contain;transition:transform 0.3s}
+.product-card:hover .product-image{transform:scale(1.02)}
+.product-badge{position:absolute;top:10px;left:10px;background:#e74c3c;color:white;padding:3px 8px;border-radius:4px;font-size:11px;font-weight:600}
+.product-status-badge{position:absolute;top:10px;right:10px;padding:3px 8px;border-radius:4px;font-size:11px;font-weight:600}
+.status-active{background:#27ae60;color:white}
+.status-inactive{background:#7f8c8d;color:white}
+.product-content{padding:15px}
+.product-name{font-weight:600;font-size:15px;color:#2c3e50;margin-bottom:10px;height:42px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.product-price-container{display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap}
+.current-price{color:#27ae60;font-weight:700;font-size:18px}
+.original-price{color:#95a5a6;font-size:14px;text-decoration:line-through}
+.save-badge{background:#f1c40f;color:#333;padding:2px 6px;border-radius:4px;font-size:11px;font-weight:600}
+.product-id{color:#7f8c8d;font-size:11px;margin-bottom:15px;font-family:monospace;background:#f8f9fa;padding:4px 8px;border-radius:4px;display:inline-block}
+.product-actions{display:flex;gap:8px;margin-top:15px;flex-wrap:wrap}
+.action-btn{padding:8px 12px;border:none;border-radius:5px;font-size:12px;cursor:pointer;font-weight:600;flex:1;text-align:center;transition:all 0.2s;min-width:80px}
+.action-btn:hover{opacity:0.9}
+.reviews-btn{background:#3498db;color:white}
+.details-btn{background:#9b59b6;color:white}
+.status-btn-active{background:#27ae60;color:white}
+.status-btn-inactive{background:#7f8c8d;color:white}
+.delete-btn{background:#e74c3c;color:white}
 
-.loading{text-align:center;padding:40px 15px;color:#666;grid-column:span 2}
-.loading-spinner{border:3px solid #f3f3f3;border-top:3px solid #2874f0;border-radius:50%;width:40px;height:40px;margin:0 auto 15px;animation:spin 1s linear infinite}
+/* Hide edit button */
+.action-btn.editReview {
+    display: none !important;
+    visibility: hidden !important;
+}
+
+/* Empty State */
+.empty-state{text-align:center;padding:40px 20px;color:#7f8c8d;background:#fff;border-radius:8px;grid-column:1/-1;box-shadow:0 3px 10px rgba(0,0,0,0.08);border:1px solid #eee}
+.empty-title{font-size:18px;margin-bottom:10px;color:#2c3e50;font-weight:600}
+.empty-text{font-size:14px;color:#95a5a6;margin-bottom:20px;max-width:400px;margin-left:auto;margin-right:auto}
+
+/* Loading */
+.loading{text-align:center;padding:40px 15px;color:#7f8c8d;grid-column:1/-1}
+.loading-spinner{border:3px solid #f3f3f3;border-top:3px solid #3498db;border-radius:50%;width:40px;height:40px;margin:0 auto 15px;animation:spin 1s linear infinite}
 @keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
 
-.modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:1000;overflow-y:auto;padding:20px 15px}
-.modal-content{background:#fff;padding:20px;border-radius:10px;max-width:400px;width:100%;margin:0 auto;animation:slideUp 0.3s ease}
+/* Modal */
+.modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:1000;overflow-y:auto;padding:20px}
+.modal-content{background:#fff;max-width:700px;margin:20px auto;border-radius:8px;padding:25px;animation:slideUp 0.3s ease;box-shadow:0 10px 30px rgba(0,0,0,0.2)}
 @keyframes slideUp{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
-.modal-title{font-size:18px;margin-bottom:15px;color:#333;font-weight:600}
-.modal-actions{display:flex;gap:10px;margin-top:20px;justify-content:flex-end}
-.btn-cancel{background:#f5f5f5;color:#666;padding:10px 20px}
-.btn-confirm{background:#f44336;color:#fff;padding:10px 20px}
-.btn-save{background:#4caf50;color:#fff;padding:10px 20px}
+.modal-title{font-size:18px;font-weight:600;margin-bottom:20px;color:#2c3e50;padding-bottom:10px;border-bottom:1px solid #eee}
+.modal-actions{display:flex;gap:10px;margin-top:25px;justify-content:flex-end}
+.btn-cancel{background:#95a5a6;color:white;padding:10px 20px;border:none;border-radius:5px;cursor:pointer;font-weight:600}
+.btn-confirm{background:#e74c3c;color:white;padding:10px 20px;border:none;border-radius:5px;cursor:pointer;font-weight:600}
+.btn-save{background:#27ae60;color:white;padding:10px 20px;border:none;border-radius:5px;cursor:pointer;font-weight:600}
+.btn-cancel:hover,.btn-confirm:hover,.btn-save:hover{opacity:0.9}
 
-.form-group{margin-bottom:15px}
-.form-label{display:block;margin-bottom:5px;font-size:14px;font-weight:600;color:#333}
-.form-input{width:100%;padding:12px;border:1px solid #ddd;border-radius:6px;font-size:14px}
-.form-input:focus{border-color:#2874f0;outline:none;box-shadow:0 0 0 2px rgba(40,116,240,0.2)}
+/* Form */
+.form-group{margin-bottom:20px}
+.form-label{display:block;margin-bottom:8px;font-weight:600;color:#2c3e50}
+.form-input,.form-textarea{width:100%;padding:10px;border:1px solid #ddd;border-radius:5px;font-size:14px}
+.form-input:focus,.form-textarea:focus{outline:none;border-color:#3498db;box-shadow:0 0 0 2px rgba(52,152,219,0.2)}
+.form-textarea{height:120px;resize:vertical}
 
-.upi-display{padding:15px;background:#f8f5ff;border-radius:8px;margin-bottom:20px;border:1px solid #e1bee7}
-.upi-current{font-weight:600;color:#7b1fa2;font-size:16px;word-break:break-all;margin-top:5px}
-.upi-label{color:#666;font-size:13px}
-.upi-actions{margin-top:15px;display:flex;gap:8px}
+/* Image Upload */
+.upload-area{border:2px dashed #3498db;border-radius:8px;padding:25px;text-align:center;background:#f8fafc;cursor:pointer;transition:all 0.3s;margin-bottom:15px}
+.upload-area:hover{border-color:#2980b9;background:#f0f7ff}
+.upload-icon{font-size:40px;color:#3498db;margin-bottom:10px}
+.upload-text{color:#2c3e50;font-size:14px;margin-bottom:5px}
+.upload-subtext{color:#7f8c8d;font-size:12px}
+.file-input{display:none}
+.uploaded-images-container{margin-top:15px}
+.uploaded-images-grid{display:grid;grid-template-columns:repeat(4, 1fr);gap:10px;margin-top:10px}
+.image-preview-item{position:relative;border-radius:6px;overflow:hidden;border:1px solid #ddd}
+.image-preview{width:100%;height:80px;object-fit:cover}
+.remove-image-btn{position:absolute;top:5px;right:5px;background:rgba(231,76,60,0.9);color:white;border:none;border-radius:50%;width:20px;height:20px;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center}
 
-.alert{position:fixed;top:20px;right:15px;padding:12px 20px;border-radius:8px;font-size:14px;z-index:10000;max-width:300px;box-shadow:0 3px 10px rgba(0,0,0,0.2);animation:slideIn 0.3s ease}
+/* UPI Modal */
+.upi-display{padding:15px;background:#f8f9fa;border-radius:5px;margin-bottom:20px}
+.upi-current{font-weight:600;color:#8e44ad;font-size:16px;word-break:break-all;margin-top:5px}
+.upi-actions{display:flex;gap:10px;margin-top:15px}
+
+/* Reviews Modal */
+.reviews-modal .modal-content{max-width:900px}
+.reviews-list{max-height:400px;overflow-y:auto;margin-bottom:20px;padding-right:10px}
+.review-item{background:#f8f9fa;border-radius:8px;padding:15px;margin-bottom:15px;border:1px solid #eee}
+.review-header{display:flex;justify-content:space-between;margin-bottom:10px}
+.review-customer{font-weight:600;color:#2c3e50}
+.review-rating{color:#f39c12;font-weight:600}
+.review-comment{color:#34495e;font-size:14px;line-height:1.5;margin-bottom:10px}
+.review-date{color:#95a5a6;font-size:12px}
+.review-images-container{margin-top:15px}
+.review-images-grid{display:grid;grid-template-columns:repeat(auto-fill, minmax(80px, 1fr));gap:10px;margin-top:10px}
+.review-image{width:100%;height:80px;object-fit:cover;border-radius:6px;border:1px solid #ddd;cursor:pointer}
+.review-image:hover{opacity:0.8}
+
+/* About Product Modal */
+.about-product-modal .modal-content{max-width:700px}
+.about-product-container{max-height:400px;overflow-y:auto;margin-bottom:20px;padding-right:10px}
+.about-product-item{background:#f8f9fa;border-radius:8px;padding:15px;margin-bottom:15px;border:1px solid #eee}
+.about-product-header{display:flex;justify-content:space-between;margin-bottom:10px}
+.about-product-author{font-weight:600;color:#2c3e50}
+.about-product-date{color:#95a5a6;font-size:12px}
+.about-product-content{color:#34495e;font-size:14px;line-height:1.5;margin-bottom:10px;white-space:pre-line}
+.about-product-actions{display:flex;gap:8px;margin-top:8px}
+.about-product-btn{background:#3498db;color:white;border:none;padding:5px 10px;border-radius:4px;font-size:11px;cursor:pointer}
+.about-product-delete-btn{background:#e74c3c;color:white;border:none;padding:5px 10px;border-radius:4px;font-size:11px;cursor:pointer}
+
+/* Image Modal */
+.image-modal{background:rgba(0,0,0,0.9)}
+.image-modal-content{max-width:90%;max-height:90vh;margin:auto}
+.full-image{width:100%;height:auto;max-height:90vh;object-fit:contain}
+
+/* Alert */
+.alert{position:fixed;top:20px;right:20px;padding:12px 20px;border-radius:5px;font-size:14px;z-index:10000;max-width:300px;box-shadow:0 5px 15px rgba(0,0,0,0.15);animation:slideIn 0.3s ease;font-weight:500}
 @keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
-.alert-success{background:#4caf50;color:white}
-.alert-error{background:#f44336;color:white}
+.alert-success{background:#27ae60;color:white}
+.alert-error{background:#e74c3c;color:white}
 
-@media(max-width:480px){
+/* Responsive for iPhone XR (414px) */
+@media (max-width: 414px) {
     .header{padding:12px}
     .header-title{font-size:18px}
     .btn{padding:8px 12px;font-size:13px}
-    .stats{gap:8px}
-    .stat-card{padding:12px}
-    .stat-value{font-size:18px}
-    .products-grid{grid-template-columns:1fr;gap:10px}
-    .product-image{height:130px}
-    .action-btn{padding:5px 8px;font-size:11px}
-    .modal-content{padding:15px;max-width:95%}
+    .stats{grid-template-columns:repeat(2, 1fr);gap:12px}
+    .stat-card{padding:15px}
+    .stat-value{font-size:20px}
+    .products-grid{grid-template-columns:1fr;gap:15px}
+    .product-image-container{height:160px}
+    .modal-content{padding:20px;max-width:95%}
+    .reviews-modal .modal-content{max-width:95%}
+    .product-actions{gap:6px}
+    .action-btn{padding:8px 6px;font-size:11px;min-width:70px}
+    .header-actions{gap:8px}
+    .uploaded-images-grid{grid-template-columns:repeat(3, 1fr)}
+    .review-images-grid{grid-template-columns:repeat(3, 1fr)}
+}
+
+@media (max-width: 768px) {
+    .header-content{flex-direction:column;text-align:center}
+    .header-actions{justify-content:center}
+    .uploaded-images-grid{grid-template-columns:repeat(4, 1fr)}
+    .review-images-grid{grid-template-columns:repeat(4, 1fr)}
 }
 </style>
 </head>
@@ -89,28 +179,35 @@ body{background:#f0f2f5;font-size:14px}
 <body>
 <div class="header">
     <div class="header-content">
-        <div class="header-title"> Product Dashboard</div>
+        <div class="header-title">Product Management Dashboard</div>
         <div class="header-actions">
-            <a href="/add-product.html" class="btn btn-add"> Add Product</a>
-            <button class="btn btn-upi" onclick="openUPIModal()"> UPI ID</button>
-            <button class="btn" onclick="refreshList()"> Refresh</button>
+            <a href="/add-product.html" class="btn btn-add">Add New Product</a>
+            <button class="btn btn-upi" onclick="openUPIModal()">Manage UPI ID</button>
         </div>
     </div>
 </div>
 
 <div class="container">
     <div class="search-box">
-        <input type="text" class="search-input" id="searchInput" placeholder=" Search products..." onkeyup="filterProducts()">
+        <input type="text" class="search-input" id="searchInput" placeholder="Search products by name or ID..." onkeyup="filterProducts()">
     </div>
 
-    <div class="stats" id="stats">
+    <div class="stats">
         <div class="stat-card">
             <div class="stat-value" id="totalProducts">0</div>
             <div class="stat-label">Total Products</div>
         </div>
         <div class="stat-card">
+            <div class="stat-value" id="totalReviews">0</div>
+            <div class="stat-label">Total Reviews</div>
+        </div>
+        <div class="stat-card">
             <div class="stat-value" id="totalSales">₹0</div>
             <div class="stat-label">Total Value</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="activeProducts">0</div>
+            <div class="stat-label">Active Products</div>
         </div>
     </div>
 
@@ -125,42 +222,35 @@ body{background:#f0f2f5;font-size:14px}
 <!-- Delete Product Modal -->
 <div class="modal" id="deleteModal">
     <div class="modal-content">
-        <div class="modal-title">🗑️ Delete Product</div>
-        <p id="deleteMessage" style="color:#666;font-size:14px;line-height:1.5">Are you sure you want to delete this product?</p>
+        <div class="modal-title">Delete Product</div>
+        <p id="deleteMessage" style="color:#7f8c8d;margin-bottom:20px">Are you sure you want to delete this product?</p>
         <div class="modal-actions">
-            <button class="btn btn-cancel" onclick="closeModal()">Cancel</button>
-            <button class="btn btn-confirm" onclick="confirmDelete()">Delete</button>
+            <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+            <button class="btn-confirm" onclick="confirmDelete()">Delete Product</button>
         </div>
     </div>
 </div>
 
-<!-- UPI ID Management Modal -->
+<!-- UPI Modal -->
 <div class="modal" id="upiModal">
     <div class="modal-content">
-        <div class="modal-title">💳 Manage UPI ID</div>
-        
-        <div class="upi-display" id="currentUPIDisplay">
-            <div class="upi-label">Current UPI ID:</div>
+        <div class="modal-title">Manage UPI ID</div>
+        <div class="upi-display">
+            <div style="font-weight:600;color:#2c3e50">Current UPI ID:</div>
             <div class="upi-current" id="currentUPIText">No UPI ID set</div>
             <div class="upi-actions">
-                <button class="action-btn upi-btn" onclick="copyUPI()" style="background:#7b1fa2;color:white">Copy UPI</button>
+                <button class="action-btn" onclick="copyUPI()" style="background:#9b59b6;color:white;border:none">Copy UPI</button>
                 <button class="action-btn delete-btn" onclick="showDeleteUPIModal()">Remove</button>
             </div>
         </div>
-        
-        <div id="upiForm">
-            <div class="form-group">
-                <label class="form-label">New UPI ID</label>
-                <input type="text" id="upiIdInput" class="form-input" 
-                       placeholder="username@upi"
-                       required>
-                <div style="font-size:12px;color:#666;margin-top:5px">Example: username@okhdfcbank</div>
-            </div>
+        <div class="form-group">
+            <label class="form-label">New UPI ID</label>
+            <input type="text" id="upiIdInput" class="form-input" placeholder="username@upi">
+            <div style="font-size:12px;color:#95a5a6;margin-top:5px">Example: username@okhdfcbank, mobile@paytm</div>
         </div>
-        
         <div class="modal-actions">
-            <button class="btn btn-cancel" onclick="closeUPIModal()">Cancel</button>
-            <button class="btn btn-save" onclick="saveUPI()">Save UPI ID</button>
+            <button class="btn-cancel" onclick="closeUPIModal()">Cancel</button>
+            <button class="btn-save" onclick="saveUPI()">Save UPI ID</button>
         </div>
     </div>
 </div>
@@ -168,12 +258,144 @@ body{background:#f0f2f5;font-size:14px}
 <!-- Delete UPI Modal -->
 <div class="modal" id="deleteUPIModal">
     <div class="modal-content">
-        <div class="modal-title">❌ Remove UPI ID</div>
-        <p id="deleteUPIMessage" style="color:#666;font-size:14px;line-height:1.5">Are you sure you want to remove the current UPI ID?</p>
+        <div class="modal-title">Remove UPI ID</div>
+        <p id="deleteUPIMessage" style="color:#7f8c8d;margin-bottom:20px">Are you sure you want to remove the current UPI ID?</p>
         <div class="modal-actions">
-            <button class="btn btn-cancel" onclick="closeDeleteUPIModal()">Cancel</button>
-            <button class="btn btn-confirm" onclick="confirmDeleteUPI()">Remove</button>
+            <button class="btn-cancel" onclick="closeDeleteUPIModal()">Cancel</button>
+            <button class="btn-confirm" onclick="confirmDeleteUPI()">Remove UPI ID</button>
         </div>
+    </div>
+</div>
+
+<!-- Reviews Modal with Image Upload -->
+<div class="modal reviews-modal" id="reviewsModal">
+    <div class="modal-content">
+        <div class="modal-title">
+            <span id="productNameTitle">Product Reviews</span>
+            <div style="font-size:13px;color:#7f8c8d;margin-top:5px">
+                ID: <span id="productIdTitle" style="font-family:monospace;background:#f8f9fa;padding:3px 6px;border-radius:3px"></span>
+            </div>
+        </div>
+        
+        <div style="background:#f8f9fa;padding:12px;border-radius:5px;margin-bottom:15px">
+            <div style="font-weight:600;color:#2c3e50">Reviews Count: <span id="reviewsCount">0</span></div>
+        </div>
+        
+        <div class="reviews-list" id="reviewsList"></div>
+        
+        <div style="border-top:1px solid #eee;padding-top:20px;margin-top:20px">
+            <div class="modal-title" style="font-size:16px;margin-bottom:15px">Add New Review</div>
+            <div class="form-group">
+                <label class="form-label">Customer Name</label>
+                <input type="text" id="newReviewCustomer" class="form-input" placeholder="Enter customer name" maxlength="50">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Rating (1-5)</label>
+                <select id="newReviewRating" class="form-input">
+                    <option value="5">5 Stars</option>
+                    <option value="4">4 Stars</option>
+                    <option value="3">3 Stars</option>
+                    <option value="2">2 Stars</option>
+                    <option value="1">1 Star</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Review Comment</label>
+                <textarea id="newReviewComment" class="form-textarea" placeholder="Enter review comment" maxlength="500"></textarea>
+            </div>
+            
+            <!-- Review Images Upload -->
+            <div class="form-group">
+                <label class="form-label">Upload Review Images (Max 5 images)</label>
+                <div class="upload-area" onclick="document.getElementById('reviewImagesInput').click()">
+                    <div class="upload-icon">📷</div>
+                    <div class="upload-text">Click to upload images</div>
+                    <div class="upload-subtext">JPG, PNG, GIF (Max 2MB each)</div>
+                </div>
+                <input type="file" id="reviewImagesInput" class="file-input" accept="image/*" multiple onchange="handleReviewImageUpload(event)">
+                <div class="uploaded-images-container">
+                    <div class="uploaded-images-grid" id="reviewImagesPreview"></div>
+                </div>
+            </div>
+            
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="closeReviewsModal()">Close</button>
+                <button class="btn-save" onclick="addNewReview()">Add Review</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- About Product Modal -->
+<div class="modal about-product-modal" id="aboutProductModal">
+    <div class="modal-content">
+        <div class="modal-title">
+            <span id="aboutProductName">About Product</span>
+            <div style="font-size:13px;color:#7f8c8d;margin-top:5px">
+                ID: <span id="aboutProductId" style="font-family:monospace;background:#f8f9fa;padding:3px 6px;border-radius:3px"></span>
+            </div>
+        </div>
+        
+        <div class="about-product-container" id="aboutProductContainer">
+            <!-- About Product posts will be loaded here -->
+        </div>
+        
+        <div style="border-top:1px solid #eee;padding-top:20px;margin-top:20px">
+            <div class="modal-title" style="font-size:16px;margin-bottom:15px">Add New About Product</div>
+            <div class="form-group">
+                <label class="form-label">About Product Content</label>
+                <textarea id="newAboutProduct" class="form-textarea" placeholder="Write about this product..." rows="6" maxlength="2000"></textarea>
+                <div style="font-size:12px;color:#95a5a6;margin-top:5px">Maximum 2000 characters</div>
+            </div>
+            
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="closeAboutProductModal()">Close</button>
+                <button class="btn-save" onclick="addAboutProduct()">Add About Product</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Review Modal -->
+<div class="modal" id="deleteReviewModal">
+    <div class="modal-content">
+        <div class="modal-title">Delete Review</div>
+        <p id="deleteReviewMessage" style="color:#7f8c8d;margin-bottom:20px"></p>
+        <div class="modal-actions">
+            <button class="btn-cancel" onclick="closeDeleteReviewModal()">Cancel</button>
+            <button class="btn-confirm" onclick="confirmDeleteReview()">Delete Review</button>
+        </div>
+    </div>
+</div>
+
+<!-- Delete About Product Modal -->
+<div class="modal" id="deleteAboutProductModal">
+    <div class="modal-content">
+        <div class="modal-title">Delete About Product</div>
+        <p id="deleteAboutProductMessage" style="color:#7f8c8d;margin-bottom:20px"></p>
+        <div class="modal-actions">
+            <button class="btn-cancel" onclick="closeDeleteAboutProductModal()">Cancel</button>
+            <button class="btn-confirm" onclick="confirmDeleteAboutProduct()">Delete</button>
+        </div>
+    </div>
+</div>
+
+<!-- Status Change Modal -->
+<div class="modal" id="statusModal">
+    <div class="modal-content">
+        <div class="modal-title">Change Product Status</div>
+        <p id="statusMessage" style="color:#7f8c8d;margin-bottom:20px"></p>
+        <div class="modal-actions">
+            <button class="btn-cancel" onclick="closeStatusModal()">Cancel</button>
+            <button class="btn-save" onclick="confirmStatusChange()">Confirm</button>
+        </div>
+    </div>
+</div>
+
+<!-- Image View Modal -->
+<div class="modal image-modal" id="imageModal">
+    <div class="modal-content">
+        <img id="fullSizeImage" class="full-image" src="" alt="Full size image">
     </div>
 </div>
 
@@ -181,7 +403,14 @@ body{background:#f0f2f5;font-size:14px}
 const API_BASE_URL = '/api';
 let allProducts = [];
 let productToDelete = null;
+let productToChangeStatus = null;
 let currentUPI = null;
+let currentProductForReviews = null;
+let currentReviews = [];
+let reviewToDelete = null;
+let currentProductForAbout = null;
+let aboutProductToDelete = null;
+let reviewImages = [];
 
 function formatPrice(price) {
     return '₹' + price.toLocaleString('en-IN');
@@ -191,21 +420,6 @@ function showAlert(message, type = 'success') {
     const alertDiv = document.createElement('div');
     alertDiv.className = `alert alert-${type}`;
     alertDiv.textContent = message;
-    alertDiv.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 15px;
-        background: ${type === 'success' ? '#4caf50' : type === 'error' ? '#f44336' : '#ff9800'};
-        color: white;
-        padding: 12px 20px;
-        border-radius: 8px;
-        font-size: 14px;
-        z-index: 10000;
-        max-width: 300px;
-        box-shadow: 0 3px 10px rgba(0,0,0,0.2);
-        animation: slideIn 0.3s ease;
-    `;
-    
     document.body.appendChild(alertDiv);
     
     setTimeout(() => {
@@ -249,11 +463,13 @@ async function loadProducts() {
             productsGrid.innerHTML = `
                 <div class="empty-state">
                     <div class="empty-title">No products found</div>
-                    <div class="empty-text">Add your first product to get started</div>
+                    <div class="empty-text">Add your first product to get started with your store</div>
                     <a href="/add-product.html" class="btn btn-add" style="margin-top:15px;display:inline-block">Add First Product</a>
                 </div>
             `;
+            updateStats(allProducts);
         } else {
+            await loadReviewsForProducts();
             renderProducts(allProducts);
             updateStats(allProducts);
         }
@@ -263,11 +479,38 @@ async function loadProducts() {
         productsGrid.innerHTML = `
             <div class="empty-state">
                 <div class="empty-title">Error loading products</div>
-                <div class="empty-text">Please check your connection</div>
+                <div class="empty-text">Please check your connection and try again</div>
                 <button class="btn" onclick="loadProducts()" style="margin-top:15px">Try Again</button>
             </div>
         `;
     }
+}
+
+async function loadReviewsForProducts() {
+    let totalReviews = 0;
+    
+    for (let product of allProducts) {
+        try {
+            const productId = product.id || product._id;
+            const response = await fetch(`${API_BASE_URL}/reviews/${productId}`);
+            
+            if (response.ok) {
+                const result = await response.json();
+                if (result.success && result.data) {
+                    product.reviewsCount = result.data.length;
+                    totalReviews += result.data.length;
+                } else {
+                    product.reviewsCount = 0;
+                }
+            } else {
+                product.reviewsCount = 0;
+            }
+        } catch (error) {
+            product.reviewsCount = 0;
+        }
+    }
+    
+    document.getElementById('totalReviews').textContent = totalReviews;
 }
 
 async function loadUPI() {
@@ -304,8 +547,8 @@ function renderProducts(products) {
     if (products.length === 0) {
         productsGrid.innerHTML = `
             <div class="empty-state">
-                <div class="empty-title">No products found</div>
-                <div class="empty-text">Try changing your search</div>
+                <div class="empty-title">No matching products</div>
+                <div class="empty-text">Try changing your search terms</div>
             </div>
         `;
         return;
@@ -314,24 +557,53 @@ function renderProducts(products) {
     let html = '';
     products.forEach(product => {
         const productId = product.id || product._id || 'N/A';
-        const name = product.name || 'Unnamed';
+        const name = product.name || 'Unnamed Product';
         const price = Number(product.price) || 0;
         const discount = Number(product.discount_amount) || 0;
-        const mainImage = product.main_image || product.mainImage || '';
         const discountedPrice = price - discount;
-        const displayName = name.length > 50 ? name.substring(0, 50) + '...' : name;
-        const displayId = productId.length > 8 ? productId.substring(0, 8) + '...' : productId;
+        const mainImage = product.main_image || product.mainImage || '';
+        const displayName = name.length > 40 ? name.substring(0, 40) + '...' : name;
+        const displayId = productId.length > 10 ? productId.substring(0, 10) + '...' : productId;
+        const category = product.category || 'Uncategorized';
+        const status = product.status || 'active';
+        const isActive = status === 'active';
+        
+        let discountBadge = '';
+        if (discount > 0) {
+            const discountPercent = Math.round((discount / price) * 100);
+            discountBadge = `<div class="product-badge">${discountPercent}% OFF</div>`;
+        }
 
         html += `
             <div class="product-card">
-                <img src="${mainImage}" class="product-image" alt="${name}" 
-                     onerror="this.onerror=null; this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDMwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIzMDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjRjBGNEY4Ii8+CjxwYXRoIGQ9Ik0xNTAgNzBDMTcwLjU1OSA3MCAxODcgNTMuNTU5MSAxODcgMzNDMTg3IDEyLjQ0MDkgMTcwLjU1OSAtNCAxNTAgLTNDMTI5LjQ0MSAtNCAxMTMgMTIuNDQwOSAxMTMgMzNDMTEzIDUzLjU1OTEgMTI5LjQ0MSA3MCAxNTAgNzBaIiBmaWxsPSIjODg4Ii8+CjxwYXRoIGQ9Ik0yMjAgMTYwSDE4MEMxNzcuNzkxIDE2MCAxNzYgMTU4LjIwOSAxNzYgMTU2VjEyMC44ODdDMTc2IDExOS4wMjQgMTc2Ljc5IDExNy4yNTEgMTc4LjIzOCAxMTUuOTYzTDE4NS4yMzggMTA4LjA4OEMxODYuNTU0IDEwNi45MTIgMTg4LjAwOCAxMDYgMTg5LjU1MiAxMDZIMTkwLjQ0OEMxOTEuOTkyIDEwNiAxOTMuNDQ2IDEwNi45MTIgMTk0Ljc2MiAxMDguMDg4TDIwMS43NjIgMTE1Ljk2M0MyMDMuMjEgMTE3LjI1MSAyMDQgMTE5LjAyNCAyMDQgMTIwLjg4N1YxNTZDMjA0IDE1OC4yMDkgMjAyLjIwOSAxNjAgMjAwIDE2MFoiIGZpbGw9IiM4ODgiLz4KPC9zdmc+'">
+                <div class="product-image-container">
+                    ${discountBadge}
+                    <div class="product-status-badge ${isActive ? 'status-active' : 'status-inactive'}">
+                        ${isActive ? 'Active' : 'Inactive'}
+                    </div>
+                    <img src="${mainImage}" class="product-image" alt="${name}" 
+                         onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDMwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIzMDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjZjFmNWY5Ii8+CjxjaXJjbGUgY3g9IjE1MCIgY3k9IjgwIiByPSI0MCIgZmlsbD0iI2NiZDVlMSIvPjxyZWN0IHg9IjgwIiB5PSIxNDAiIHdpZHRoPSIxNDAiIGhlaWdodD0iOCIgb3BhY2l0eT0iMC43IiByeD0iNCIgZmlsbD0iI2NiZDVlMSIvPjxyZWN0IHg9IjEwMCIgeT0iMTU0IiB3aWR0aD0iMTAwIiBoZWlnaHQ9IjYiIG9wYWNpdHk9IjAuNSIgcng9IjMiIGZpbGw9IiNjYmQ1ZTEiLz4KPC9zdmc+'">
+                </div>
                 <div class="product-content">
+                    <div style="font-size:12px;color:#7f8c8d;margin-bottom:5px">${category}</div>
                     <div class="product-name">${displayName}</div>
-                    <div class="product-price">${formatPrice(discountedPrice)}</div>
-                    ${discount > 0 ? `<div class="product-discount">Save ₹${discount}</div>` : ''}
-                    <div style="font-size:10px;color:#888;margin-bottom:8px">ID: ${displayId}</div>
+                    <div class="product-price-container">
+                        <div class="current-price">${formatPrice(discountedPrice)}</div>
+                        ${price > discountedPrice ? `<div class="original-price">${formatPrice(price)}</div>` : ''}
+                        ${discount > 0 ? `<div class="save-badge">Save ${formatPrice(discount)}</div>` : ''}
+                    </div>
+                    <div class="product-id">ID: ${displayId}</div>
                     <div class="product-actions">
+                        <button class="action-btn reviews-btn" onclick="openReviewsModal('${productId}', '${name.replace(/'/g, "\\'")}')">
+                            Reviews
+                        </button>
+                        <button class="action-btn details-btn" onclick="openAboutProductModal('${productId}', '${name.replace(/'/g, "\\'")}')">
+                            About Product
+                        </button>
+                        <button class="action-btn ${isActive ? 'status-btn-inactive' : 'status-btn-active'}" 
+                                onclick="changeProductStatus('${productId}', '${name.replace(/'/g, "\\'")}', ${isActive})">
+                            ${isActive ? 'Make Inactive' : 'Make Active'}
+                        </button>
                         <button class="action-btn delete-btn" onclick="showDeleteModal('${productId}', '${name.replace(/'/g, "\\'")}')">Delete</button>
                     </div>
                 </div>
@@ -344,14 +616,23 @@ function renderProducts(products) {
 
 function updateStats(products) {
     const totalProducts = products.length;
-    const totalValue = products.reduce((sum, p) => {
+    let totalValue = 0;
+    let activeProducts = 0;
+    
+    products.forEach(p => {
         const price = Number(p.price) || 0;
         const discount = Number(p.discount_amount) || 0;
-        return sum + (price - discount);
-    }, 0);
-
+        totalValue += (price - discount);
+        
+        // Count active products
+        if ((p.status || 'active') === 'active') {
+            activeProducts++;
+        }
+    });
+    
     document.getElementById('totalProducts').textContent = totalProducts;
     document.getElementById('totalSales').textContent = formatPrice(totalValue);
+    document.getElementById('activeProducts').textContent = activeProducts;
 }
 
 function filterProducts() {
@@ -361,6 +642,7 @@ function filterProducts() {
     if (searchTerm) {
         filtered = filtered.filter(p => 
             (p.name || '').toLowerCase().includes(searchTerm) ||
+            (p.category || '').toLowerCase().includes(searchTerm) ||
             (p.id || p._id || '').toString().toLowerCase().includes(searchTerm)
         );
     }
@@ -369,9 +651,502 @@ function filterProducts() {
     updateStats(filtered);
 }
 
+function changeProductStatus(productId, productName, isCurrentlyActive) {
+    productToChangeStatus = { productId, productName, newStatus: isCurrentlyActive ? 'inactive' : 'active' };
+    
+    const statusText = isCurrentlyActive ? 'inactive' : 'active';
+    document.getElementById('statusMessage').textContent = 
+        `Are you sure you want to change "${productName}" status to ${statusText}?`;
+    document.getElementById('statusModal').style.display = 'block';
+}
+
+function closeStatusModal() {
+    document.getElementById('statusModal').style.display = 'none';
+    productToChangeStatus = null;
+}
+
+async function confirmStatusChange() {
+    if (!productToChangeStatus) return;
+    
+    try {
+        const { productId, productName, newStatus } = productToChangeStatus;
+        
+        // Get current product data
+        const product = allProducts.find(p => (p.id || p._id) === productId);
+        
+        if (!product) {
+            showAlert('Product not found', 'error');
+            closeStatusModal();
+            return;
+        }
+        
+        // Update product status
+        const updatedProduct = {
+            ...product,
+            status: newStatus,
+            updated_at: new Date().toISOString()
+        };
+        
+        const response = await fetch(`${API_BASE_URL}/products/${productId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(updatedProduct)
+        });
+        
+        if (response.ok) {
+            showAlert(`Product status changed to ${newStatus} successfully`);
+            closeStatusModal();
+            
+            // Update local product data
+            const productIndex = allProducts.findIndex(p => (p.id || p._id) === productId);
+            if (productIndex !== -1) {
+                allProducts[productIndex] = updatedProduct;
+            }
+            
+            // Re-render products
+            renderProducts(allProducts);
+            updateStats(allProducts);
+        } else {
+            throw new Error('Failed to update product status');
+        }
+        
+    } catch (error) {
+        console.error('Error changing product status:', error);
+        showAlert('Error changing product status', 'error');
+        closeStatusModal();
+    }
+}
+
+function openAboutProductModal(productId, productName) {
+    currentProductForAbout = productId;
+    
+    document.getElementById('aboutProductName').textContent = productName;
+    document.getElementById('aboutProductId').textContent = productId;
+    document.getElementById('newAboutProduct').value = '';
+    
+    document.getElementById('aboutProductModal').style.display = 'block';
+    loadAboutProduct(productId);
+}
+
+async function loadAboutProduct(productId) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/about-product/${productId}`);
+        const container = document.getElementById('aboutProductContainer');
+        
+        if (response.ok) {
+            const result = await response.json();
+            
+            if (result.success && result.data && result.data.length > 0) {
+                let html = '';
+                result.data.forEach((post, index) => {
+                    html += `
+                        <div class="about-product-item">
+                            <div class="about-product-header">
+                                <div class="about-product-author">Admin</div>
+                                <div class="about-product-date">${formatDate(post.created_at)}</div>
+                            </div>
+                            <div class="about-product-content">${post.content || ''}</div>
+                            <div class="about-product-actions">
+                                <button class="about-product-delete-btn" onclick="deleteAboutProduct('${productId}', '${post.id}')">Delete</button>
+                            </div>
+                        </div>
+                    `;
+                });
+                container.innerHTML = html;
+            } else {
+                container.innerHTML = '<div style="text-align:center;color:#7f8c8d;padding:20px">No about product content yet</div>';
+            }
+        } else {
+            container.innerHTML = '<div style="text-align:center;color:#7f8c8d;padding:20px">No about product content yet</div>';
+        }
+    } catch (error) {
+        console.error('Error loading about product:', error);
+        container.innerHTML = '<div style="text-align:center;color:#e74c3c;padding:20px">Error loading content</div>';
+    }
+}
+
+function formatDate(dateString) {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
+async function addAboutProduct() {
+    if (!currentProductForAbout) {
+        showAlert('No product selected', 'error');
+        return;
+    }
+    
+    const aboutContent = document.getElementById('newAboutProduct').value.trim();
+    
+    if (!aboutContent) {
+        showAlert('Please enter about product content', 'error');
+        return;
+    }
+    
+    if (aboutContent.length > 2000) {
+        showAlert('Content must be less than 2000 characters', 'error');
+        return;
+    }
+    
+    const postData = {
+        product_id: currentProductForAbout,
+        content: aboutContent,
+        created_at: new Date().toISOString()
+    };
+    
+    try {
+        const response = await fetch(`${API_BASE_URL}/about-product`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(postData)
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok && result.success) {
+            showAlert('About Product content added successfully');
+            document.getElementById('newAboutProduct').value = '';
+            await loadAboutProduct(currentProductForAbout);
+        } else {
+            throw new Error(result.message || 'Failed to add content');
+        }
+    } catch (error) {
+        console.error('Error adding about product:', error);
+        showAlert('Error adding about product content', 'error');
+    }
+}
+
+function closeAboutProductModal() {
+    document.getElementById('aboutProductModal').style.display = 'none';
+    document.getElementById('newAboutProduct').value = '';
+    currentProductForAbout = null;
+}
+
+async function deleteAboutProduct(productId, postId) {
+    aboutProductToDelete = { productId, postId };
+    
+    document.getElementById('deleteAboutProductMessage').textContent = 
+        'Are you sure you want to delete this about product content?';
+    document.getElementById('deleteAboutProductModal').style.display = 'block';
+}
+
+function closeDeleteAboutProductModal() {
+    document.getElementById('deleteAboutProductModal').style.display = 'none';
+    aboutProductToDelete = null;
+}
+
+async function confirmDeleteAboutProduct() {
+    if (!aboutProductToDelete) return;
+    
+    try {
+        const { productId, postId } = aboutProductToDelete;
+        
+        const response = await fetch(`${API_BASE_URL}/about-product/${productId}/${postId}`, {
+            method: 'DELETE'
+        });
+        
+        if (response.ok) {
+            showAlert('About Product content deleted successfully');
+            closeDeleteAboutProductModal();
+            await loadAboutProduct(productId);
+        } else {
+            throw new Error('Delete failed');
+        }
+        
+    } catch (error) {
+        console.error('Error deleting about product:', error);
+        showAlert('Error deleting about product content', 'error');
+    }
+}
+
+async function openReviewsModal(productId, productName) {
+    currentProductForReviews = productId;
+    reviewImages = []; // Reset images
+    
+    document.getElementById('productNameTitle').textContent = productName;
+    document.getElementById('productIdTitle').textContent = productId;
+    document.getElementById('newReviewCustomer').value = '';
+    document.getElementById('newReviewComment').value = '';
+    document.getElementById('newReviewRating').value = '5';
+    document.getElementById('reviewImagesPreview').innerHTML = '';
+    
+    document.getElementById('reviewsModal').style.display = 'block';
+    await loadProductReviews(productId);
+}
+
+async function loadProductReviews(productId) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/reviews/${productId}`);
+        const result = await response.json();
+        
+        currentReviews = result.success ? result.data || [] : [];
+        displayReviewsList();
+        
+        document.getElementById('reviewsCount').textContent = currentReviews.length;
+            
+    } catch (error) {
+        console.error('Error loading reviews:', error);
+        currentReviews = [];
+        displayReviewsList();
+        document.getElementById('reviewsCount').textContent = 'Error';
+    }
+}
+
+function displayReviewsList() {
+    const reviewsList = document.getElementById('reviewsList');
+    
+    if (currentReviews.length === 0) {
+        reviewsList.innerHTML = '<div style="text-align:center;color:#7f8c8d;padding:20px">No reviews yet</div>';
+        return;
+    }
+    
+    let html = '';
+    currentReviews.forEach((review, index) => {
+        const reviewImages = review.images || [];
+        let imagesHtml = '';
+        
+        if (reviewImages.length > 0) {
+            imagesHtml = `
+                <div class="review-images-container">
+                    <div class="review-images-grid">
+            `;
+            
+            reviewImages.forEach((img, idx) => {
+                imagesHtml += `
+                    <img src="${img}" class="review-image" alt="Review image ${idx + 1}" 
+                         onclick="showFullImage('${img}')">
+                `;
+            });
+            
+            imagesHtml += `
+                    </div>
+                </div>
+            `;
+        }
+        
+        // REMOVED EDIT BUTTON - Only Delete button
+        html += `
+            <div class="review-item">
+                <div class="review-header">
+                    <div class="review-customer">${review.customer_name || 'Anonymous'}</div>
+                    <div class="review-rating">${review.rating || 0}/5</div>
+                </div>
+                <div class="review-comment">${review.comment || 'No comment'}</div>
+                ${imagesHtml}
+                <div class="review-date">${review.date || 'No date'}</div>
+                <div style="margin-top:10px;display:flex;gap:10px;justify-content:flex-end">
+                    <button class="action-btn delete-btn" style="padding:4px 8px;font-size:11px" onclick="deleteReview(${index})">Delete</button>
+                </div>
+            </div>
+        `;
+    });
+    
+    reviewsList.innerHTML = html;
+}
+
+function handleReviewImageUpload(event) {
+    const files = event.target.files;
+    const previewContainer = document.getElementById('reviewImagesPreview');
+    
+    // Clear existing preview if we're at max
+    if (reviewImages.length + files.length > 5) {
+        showAlert('Maximum 5 images allowed', 'error');
+        event.target.value = '';
+        return;
+    }
+    
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        
+        // Validate file size (2MB max)
+        if (file.size > 2 * 1024 * 1024) {
+            showAlert(`Image ${file.name} is too large (max 2MB)`, 'error');
+            continue;
+        }
+        
+        const reader = new FileReader();
+        
+        reader.onload = function(e) {
+            const imageData = e.target.result;
+            reviewImages.push({
+                file: file,
+                dataUrl: imageData
+            });
+            
+            updateReviewImagePreview();
+        };
+        
+        reader.readAsDataURL(file);
+    }
+    
+    event.target.value = '';
+}
+
+function updateReviewImagePreview() {
+    const previewContainer = document.getElementById('reviewImagesPreview');
+    previewContainer.innerHTML = '';
+    
+    reviewImages.forEach((image, index) => {
+        previewContainer.innerHTML += `
+            <div class="image-preview-item">
+                <img src="${image.dataUrl}" class="image-preview" alt="Preview">
+                <button class="remove-image-btn" onclick="removeReviewImage(${index})">×</button>
+            </div>
+        `;
+    });
+}
+
+function removeReviewImage(index) {
+    reviewImages.splice(index, 1);
+    updateReviewImagePreview();
+}
+
+function showFullImage(imageUrl) {
+    document.getElementById('fullSizeImage').src = imageUrl;
+    document.getElementById('imageModal').style.display = 'block';
+}
+
+function closeImageModal() {
+    document.getElementById('imageModal').style.display = 'none';
+}
+
+async function addNewReview() {
+    const customer = document.getElementById('newReviewCustomer').value.trim();
+    const rating = document.getElementById('newReviewRating').value;
+    const comment = document.getElementById('newReviewComment').value.trim();
+    
+    if (!customer || !rating) {
+        showAlert('Customer name and rating are required', 'error');
+        return;
+    }
+    
+    if (!currentProductForReviews) {
+        showAlert('No product selected', 'error');
+        return;
+    }
+    
+    if (reviewImages.length > 5) {
+        showAlert('Maximum 5 images allowed', 'error');
+        return;
+    }
+    
+    // Create FormData object - SINGLE API CALL
+    const formData = new FormData();
+    formData.append('customer_name', customer);
+    formData.append('rating', rating);
+    formData.append('comment', comment || '');
+    
+    // Add images to FormData
+    if (reviewImages.length > 0) {
+        reviewImages.forEach((image) => {
+            formData.append('images', image.file);
+        });
+    }
+    
+    try {
+        // SINGLE API CALL - images and review together
+        showAlert('Adding review...');
+        
+        const response = await fetch(`${API_BASE_URL}/reviews-with-images/${currentProductForReviews}`, {
+            method: 'POST',
+            body: formData
+            // NO headers needed - browser sets multipart/form-data automatically
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok && result.success) {
+            showAlert('Review added successfully');
+            
+            // Clear form
+            document.getElementById('newReviewCustomer').value = '';
+            document.getElementById('newReviewComment').value = '';
+            document.getElementById('newReviewRating').value = '5';
+            document.getElementById('reviewImagesPreview').innerHTML = '';
+            reviewImages = [];
+            
+            // Reload reviews
+            await loadProductReviews(currentProductForReviews);
+            
+            // Update product list stats
+            await loadReviewsForProducts();
+            updateStats(allProducts);
+        } else {
+            throw new Error(result.message || 'Failed to add review');
+        }
+    } catch (error) {
+        console.error('Error adding review:', error);
+        showAlert('Error adding review: ' + error.message, 'error');
+    }
+}
+
+// REMOVED editReview function completely
+
+function deleteReview(index) {
+    const review = currentReviews[index];
+    reviewToDelete = { index, id: review.id || review._id };
+    
+    document.getElementById('deleteReviewMessage').textContent = 
+        `Are you sure you want to delete review by "${review.customer_name}"?`;
+    document.getElementById('deleteReviewModal').style.display = 'block';
+}
+
+function closeDeleteReviewModal() {
+    document.getElementById('deleteReviewModal').style.display = 'none';
+    reviewToDelete = null;
+}
+
+async function confirmDeleteReview() {
+    if (!reviewToDelete) return;
+    
+    try {
+        const reviewIndex = reviewToDelete.index;
+        const reviewId = reviewToDelete.id;
+        
+        const response = await fetch(`${API_BASE_URL}/reviews/${currentProductForReviews}/${reviewId}`, {
+            method: 'DELETE'
+        });
+        
+        if (response.ok) {
+            currentReviews.splice(reviewIndex, 1);
+            showAlert('Review deleted successfully');
+            closeDeleteReviewModal();
+            displayReviewsList();
+            
+            const reviewsCount = currentReviews.length;
+            document.getElementById('reviewsCount').textContent = reviewsCount;
+            
+            // Update product list stats
+            await loadReviewsForProducts();
+            updateStats(allProducts);
+        } else {
+            throw new Error('Delete failed');
+        }
+        
+    } catch (error) {
+        console.error('Error deleting review:', error);
+        showAlert('Error deleting review', 'error');
+    }
+}
+
+function closeReviewsModal() {
+    document.getElementById('reviewsModal').style.display = 'none';
+    currentProductForReviews = null;
+    currentReviews = [];
+    reviewImages = [];
+    document.getElementById('reviewImagesPreview').innerHTML = '';
+}
+
 function showDeleteModal(productId, productName) {
     productToDelete = productId;
-    document.getElementById('deleteMessage').textContent = `Are you sure you want to delete "${productName}"?`;
+    document.getElementById('deleteMessage').textContent = `Are you sure you want to delete "${productName}"? This action cannot be undone.`;
     document.getElementById('deleteModal').style.display = 'block';
 }
 
@@ -406,19 +1181,18 @@ async function confirmDelete() {
             );
             filterProducts();
             closeModal();
-            showAlert('✅ Product deleted successfully', 'success');
+            showAlert('Product deleted successfully');
         } else {
             throw new Error('Delete failed');
         }
 
     } catch (error) {
         console.error('Delete error:', error);
-        showAlert('❌ Error deleting product', 'error');
+        showAlert('Error deleting product', 'error');
         closeModal();
     }
 }
 
-// UPI Management Functions
 function openUPIModal() {
     document.getElementById('upiIdInput').value = currentUPI || '';
     document.getElementById('upiModal').style.display = 'block';
@@ -449,18 +1223,10 @@ async function saveUPI() {
         return;
     }
 
-    const upiRegex = /^[a-zA-Z0-9.\-_]{2,256}@[a-zA-Z]{2,64}$/;
-    if (!upiRegex.test(upiId)) {
-        showAlert('Please enter a valid UPI ID (e.g., username@upi)', 'error');
-        return;
-    }
-
     try {
         const response = await fetch(`${API_BASE_URL}/upi`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ upi_id: upiId })
         });
 
@@ -470,13 +1236,13 @@ async function saveUPI() {
             currentUPI = upiId;
             updateUPIDisplay();
             closeUPIModal();
-            showAlert('✅ UPI ID saved successfully!', 'success');
+            showAlert('UPI ID saved successfully');
         } else {
             throw new Error(result.error || 'Failed to save UPI');
         }
     } catch (error) {
         console.error('Error saving UPI:', error);
-        showAlert('❌ Error saving UPI ID', 'error');
+        showAlert('Error saving UPI ID', 'error');
     }
 }
 
@@ -493,13 +1259,13 @@ async function confirmDeleteUPI() {
             updateUPIDisplay();
             closeDeleteUPIModal();
             closeUPIModal();
-            showAlert('✅ UPI ID removed successfully', 'success');
+            showAlert('UPI ID removed successfully');
         } else {
             throw new Error('Failed to delete UPI');
         }
     } catch (error) {
         console.error('Error deleting UPI:', error);
-        showAlert('❌ Error removing UPI ID', 'error');
+        showAlert('Error removing UPI ID', 'error');
     }
 }
 
@@ -511,58 +1277,48 @@ function copyUPI() {
 
     navigator.clipboard.writeText(currentUPI)
         .then(() => {
-            showAlert('📋 UPI ID copied to clipboard!', 'success');
+            showAlert('UPI ID copied to clipboard');
         })
         .catch(err => {
             console.error('Copy failed:', err);
-            showAlert('❌ Failed to copy UPI ID', 'error');
+            showAlert('Failed to copy UPI ID', 'error');
         });
 }
 
-function refreshList() {
+// Initialize
+document.addEventListener('DOMContentLoaded', function() {
     loadProducts();
-    showAlert('🔄 Refreshing product list...', 'success');
-}
+});
 
-// Modal close handlers
-document.getElementById('deleteModal').addEventListener('click', function(e) {
-    if (e.target === this) {
+// Close modals when clicking outside
+window.addEventListener('click', function(e) {
+    if (e.target.classList.contains('modal')) {
         closeModal();
-    }
-});
-
-document.getElementById('upiModal').addEventListener('click', function(e) {
-    if (e.target === this) {
         closeUPIModal();
-    }
-});
-
-document.getElementById('deleteUPIModal').addEventListener('click', function(e) {
-    if (e.target === this) {
+        closeReviewsModal();
+        closeAboutProductModal();
+        closeDeleteReviewModal();
+        closeDeleteAboutProductModal();
         closeDeleteUPIModal();
+        closeStatusModal();
+        closeImageModal();
     }
 });
 
-// Escape key to close modals
+// Close on escape key
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
         closeModal();
         closeUPIModal();
+        closeReviewsModal();
+        closeAboutProductModal();
+        closeDeleteReviewModal();
+        closeDeleteAboutProductModal();
         closeDeleteUPIModal();
+        closeStatusModal();
+        closeImageModal();
     }
 });
-
-// Initialize on load
-window.addEventListener('load', function() {
-    loadProducts();
-});
-
-// Auto-refresh every 30 seconds
-setInterval(() => {
-    if (document.visibilityState === 'visible') {
-        loadProducts();
-    }
-}, 30000);
 </script>
 </body>
 </html>
