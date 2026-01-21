@@ -445,7 +445,6 @@ router.delete("/reviews/:productId/:reviewId", async (req, res) => {
   try {
     const { productId, reviewId } = req.params;
     
-    // Delete review from database
     await fetch(`${DB_URL}/reviews/${productId}/${reviewId}.json`, {
       method: "DELETE"
     });
@@ -750,7 +749,6 @@ router.post("/upload", upload.single('image'), async (req, res) => {
   }
 });
 
-// Health check endpoint
 router.get("/health", (req, res) => {
   res.json({
     success: true,
