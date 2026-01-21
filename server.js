@@ -2,26 +2,30 @@ require("dotenv").config();
 const express = require("express");
 const path = require("path");
 const cors = require("cors");
-const fs = require("fs");
 
 const app = express();
 
-// Create upload directories
-const uploadDirs = ['uploads', 'uploads/reviews'];
-uploadDirs.forEach(dir => {
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-});
-
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 
 // Serve static files
 app.use(express.static(path.join(__dirname, "public")));
-app.use('/uploads', express.static('uploads'));
+
+// Debug middleware
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  if (req.method === 'POST' && req.url.includes('/api/')) {
+    console.log('Request body:', req.body);
+  }
+  next();
+});
 
 // API Routes
 const apiRoutes = require("./routes/api");
@@ -42,9 +46,9 @@ app.get("/add-product.html", (req, res) => {
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error(err.stack);
+  console.error("🚨 Error Middleware:", err);
+  console.error("🚨 Error Stack:", err.stack);
   
-  // Multer file size error
   if (err.code === 'LIMIT_FILE_SIZE') {
     return res.status(400).json({
       success: false,
@@ -52,7 +56,6 @@ app.use((err, req, res, next) => {
     });
   }
   
-  // Multer file count error
   if (err.code === 'LIMIT_FILE_COUNT') {
     return res.status(400).json({
       success: false,
@@ -69,6 +72,8 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log(`Upload directory: ${path.join(__dirname, 'uploads/reviews')}`);
+  console.log(`✅ Server running on port ${PORT}`);
+  console.log(`🌐 Access at: http://localhost:${PORT}`);
+  console.log(`🔥 Firebase DB: ${process.env.FIREBASE_DB_URL}`);
+  console.log(`🔥 Firebase Storage: ${process.env.FIREBASE_STORAGE_BUCKET}`);
 });

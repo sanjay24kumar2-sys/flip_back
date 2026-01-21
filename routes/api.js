@@ -1,45 +1,82 @@
 const express = require("express");
-const fetch = (...args) =>
-  import("node-fetch").then(({ default: fetch }) => fetch(...args));
+const fetch = require("node-fetch");
 const multer = require("multer");
-const path = require("path");
-const fs = require("fs");
+const { initializeApp } = require("firebase/app");
+const { getStorage, ref, uploadBytes, getDownloadURL } = require("firebase/storage");
 
 const router = express.Router();
 const DB_URL = process.env.FIREBASE_DB_URL;
 
-// Configure multer for ALL image uploads - NO FILE TYPE RESTRICTIONS
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    const uploadDir = 'uploads/reviews/';
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-    cb(null, uploadDir);
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    // Keep original extension
-    cb(null, uniqueSuffix + path.extname(file.originalname));
-  }
-});
+// Firebase configuration - ALL FROM ENV VARIABLES
+const firebaseConfig = {
+  apiKey: process.env.FIREBASE_API_KEY,
+  authDomain: process.env.FIREBASE_AUTH_DOMAIN,
+  databaseURL: DB_URL,
+  projectId: process.env.FIREBASE_PROJECT_ID,
+  storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.FIREBASE_APP_ID
+};
 
-// ACCEPT ALL FILE TYPES - ADMIN CAN UPLOAD ANYTHING
-const upload = multer({ 
-  storage: storage,
-  limits: { 
-    fileSize: 10 * 1024 * 1024, // 10MB per file
+// Initialize Firebase
+let storage;
+try {
+  const firebaseApp = initializeApp(firebaseConfig);
+  storage = getStorage(firebaseApp);
+  console.log('✅ Firebase initialized successfully');
+} catch (error) {
+  console.error('❌ Firebase initialization error:', error);
+  console.log('⚠️  Firebase Storage features will not work');
+}
+
+// Multer configuration - memory storage (files in memory only, NOT saved locally)
+const upload = multer({
+  storage: multer.memoryStorage(), // Files stay in memory, not saved to disk
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB
     files: 5 // Max 5 files
   },
-  // REMOVED fileFilter - Accept all files
-  fileFilter: function (req, file, cb) {
-    // Accept all files
+  fileFilter: (req, file, cb) => {
+    // Accept all file types
     cb(null, true);
   }
 });
 
-// Serve uploaded files
-router.use('/uploads', express.static('uploads'));
+// Function to upload file to Firebase Storage
+async function uploadToFirebaseStorage(file, productId) {
+  try {
+    if (!storage) {
+      throw new Error('Firebase Storage not initialized');
+    }
+    
+    const timestamp = Date.now();
+    const randomString = Math.random().toString(36).substring(2, 15);
+    const fileExtension = file.originalname.split('.').pop() || 'jpg';
+    const fileName = `review_${productId}_${timestamp}_${randomString}.${fileExtension}`;
+    
+    // Create a reference to the storage location
+    const storageRef = ref(storage, `reviews/${fileName}`);
+    
+    // Upload the file
+    const snapshot = await uploadBytes(storageRef, file.buffer, {
+      contentType: file.mimetype,
+    });
+    
+    // Get the download URL
+    const downloadURL = await getDownloadURL(snapshot.ref);
+    
+    return {
+      url: downloadURL,
+      fileName: fileName,
+      originalName: file.originalname,
+      mimeType: file.mimetype,
+      size: file.size
+    };
+  } catch (error) {
+    console.error('Error uploading to Firebase Storage:', error);
+    throw error;
+  }
+}
 
 /* PRODUCTS */
 router.get("/products", async (req, res) => {
@@ -84,25 +121,41 @@ router.post("/products", async (req, res) => {
   try {
     const product = req.body;
     
-    if (!product.id && !product.name) {
+    console.log('Received product data:', product);
+    
+    if (!product.id || !product.name) {
       return res.status(400).json({
         success: false,
         message: 'Product ID and name are required'
       });
     }
     
-    const productId = product.id || `PROD_${Date.now()}`;
+    // Check if product already exists
+    const checkResponse = await fetch(`${DB_URL}/products/${product.id}.json`);
+    const existingProduct = await checkResponse.json();
     
-    product.id = productId;
+    if (existingProduct) {
+      return res.status(400).json({
+        success: false,
+        message: 'Product with this ID already exists'
+      });
+    }
+    
+    const productId = product.id;
+    
     product.status = product.status || 'active';
     product.created_at = new Date().toISOString();
     product.updated_at = new Date().toISOString();
     
-    await fetch(`${DB_URL}/products/${productId}.json`, {
+    const firebaseResponse = await fetch(`${DB_URL}/products/${productId}.json`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(product)
     });
+
+    if (!firebaseResponse.ok) {
+      throw new Error(`Firebase error: ${firebaseResponse.status}`);
+    }
 
     res.json({ 
       success: true,
@@ -114,7 +167,8 @@ router.post("/products", async (req, res) => {
     console.error('Error adding product:', error);
     res.status(500).json({
       success: false,
-      message: 'Server error while adding product'
+      message: 'Server error while adding product',
+      error: error.message
     });
   }
 });
@@ -165,10 +219,12 @@ router.delete("/products/:id", async (req, res) => {
   try {
     const productId = req.params.id;
     
+    // Delete product from database
     await fetch(`${DB_URL}/products/${productId}.json`, {
       method: "DELETE"
     });
     
+    // Delete related data
     await fetch(`${DB_URL}/reviews/${productId}.json`, {
       method: "DELETE"
     });
@@ -191,7 +247,7 @@ router.delete("/products/:id", async (req, res) => {
   }
 });
 
-/* REVIEWS WITH IMAGE UPLOAD - FIXED VERSION (ACCEPTS ALL FILE TYPES) */
+/* REVIEWS WITH IMAGE UPLOAD TO FIREBASE STORAGE */
 router.post("/reviews-with-images/:productId", upload.array('images', 5), async (req, res) => {
   console.log('=== REVIEW UPLOAD STARTED ===');
   console.log('Files received:', req.files ? req.files.length : 0);
@@ -223,24 +279,24 @@ router.post("/reviews-with-images/:productId", upload.array('images', 5), async 
       });
     }
     
-    // Process uploaded files - ANY FILE TYPE
-    const fileUrls = [];
+    // Upload files to Firebase Storage
+    const uploadedFiles = [];
     if (req.files && req.files.length > 0) {
-      console.log(`Processing ${req.files.length} files`);
-      req.files.forEach(file => {
-        const fileUrl = `/uploads/reviews/${file.filename}`;
-        console.log('File saved:', {
-          filename: file.filename,
-          originalname: file.originalname,
-          size: file.size,
-          mimetype: file.mimetype,
-          url: fileUrl
-        });
-        fileUrls.push(fileUrl);
-      });
+      console.log(`Uploading ${req.files.length} files to Firebase Storage...`);
+      
+      for (const file of req.files) {
+        try {
+          const uploadedFile = await uploadToFirebaseStorage(file, productId);
+          uploadedFiles.push(uploadedFile);
+          console.log('File uploaded to Firebase:', uploadedFile);
+        } catch (uploadError) {
+          console.error('Error uploading file to Firebase:', uploadError);
+          // Continue with other files even if one fails
+        }
+      }
     }
     
-    const reviewId = `REV_${Date.now()}`;
+    const reviewId = `REV_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const reviewData = {
       id: reviewId,
       product_id: productId,
@@ -248,20 +304,15 @@ router.post("/reviews-with-images/:productId", upload.array('images', 5), async 
       rating: ratingNum,
       comment: reviewText,
       review_text: reviewText,
-      images: fileUrls, // Store all file URLs
-      files: req.files ? req.files.map(file => ({
-        filename: file.filename,
-        originalname: file.originalname,
-        mimetype: file.mimetype,
-        size: file.size
-      })) : [],
+      images: uploadedFiles.map(file => file.url), // Firebase Storage URLs
+      files: uploadedFiles,
       date: new Date().toISOString().split('T')[0],
       created_at: new Date().toISOString()
     };
     
-    console.log('Saving review to Firebase:', reviewData);
+    console.log('Saving review to Firebase Database:', reviewData);
     
-    // Save to Firebase
+    // Save to Firebase Database
     const firebaseResponse = await fetch(`${DB_URL}/reviews/${productId}/${reviewId}.json`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -269,14 +320,14 @@ router.post("/reviews-with-images/:productId", upload.array('images', 5), async 
     });
 
     if (!firebaseResponse.ok) {
-      throw new Error(`Firebase error: ${firebaseResponse.status}`);
+      throw new Error(`Firebase Database error: ${firebaseResponse.status}`);
     }
 
     res.json({
       success: true,
       message: "Review added successfully",
       reviewId: reviewId,
-      files: fileUrls
+      files: uploadedFiles
     });
     
     console.log('=== REVIEW UPLOAD SUCCESS ===');
@@ -285,24 +336,69 @@ router.post("/reviews-with-images/:productId", upload.array('images', 5), async 
     console.error('Error adding review with files:', error);
     console.error('Error stack:', error.stack);
     
-    // Clean up uploaded files if there was an error
-    if (req.files && req.files.length > 0) {
-      req.files.forEach(file => {
-        const filePath = path.join('uploads/reviews', file.filename);
-        if (fs.existsSync(filePath)) {
-          try {
-            fs.unlinkSync(filePath);
-          } catch (unlinkError) {
-            console.error('Error cleaning up file:', unlinkError);
-          }
-        }
-      });
-    }
-    
     res.status(500).json({
       success: false,
       message: `Server error while adding review: ${error.message}`,
       details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+});
+
+/* SIMPLE REVIEWS WITHOUT IMAGES */
+router.post("/reviews/:productId", async (req, res) => {
+  try {
+    const productId = req.params.productId;
+    const { customer_name, rating, comment } = req.body;
+    
+    if (!customer_name || !rating) {
+      return res.status(400).json({
+        success: false,
+        message: 'Customer name and rating are required'
+      });
+    }
+    
+    const ratingNum = parseInt(rating);
+    if (isNaN(ratingNum) || ratingNum < 1 || ratingNum > 5) {
+      return res.status(400).json({
+        success: false,
+        message: 'Rating must be a number between 1 and 5'
+      });
+    }
+    
+    const reviewId = `REV_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const reviewData = {
+      id: reviewId,
+      product_id: productId,
+      customer_name: customer_name,
+      rating: ratingNum,
+      comment: comment || '',
+      images: [],
+      date: new Date().toISOString().split('T')[0],
+      created_at: new Date().toISOString()
+    };
+    
+    // Save to Firebase Database
+    const firebaseResponse = await fetch(`${DB_URL}/reviews/${productId}/${reviewId}.json`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(reviewData)
+    });
+
+    if (!firebaseResponse.ok) {
+      throw new Error(`Firebase Database error: ${firebaseResponse.status}`);
+    }
+
+    res.json({
+      success: true,
+      message: "Review added successfully",
+      reviewId: reviewId
+    });
+    
+  } catch (error) {
+    console.error('Error adding review:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while adding review'
     });
   }
 });
@@ -345,87 +441,11 @@ router.get("/reviews/:productId", async (req, res) => {
   }
 });
 
-// Old POST endpoint for backward compatibility
-router.post("/reviews/:productId", async (req, res) => {
-  try {
-    const productId = req.params.productId;
-    const review = req.body;
-    
-    if (!review.customer_name || !review.rating) {
-      return res.status(400).json({
-        success: false,
-        message: 'Customer name and rating are required'
-      });
-    }
-    
-    if (review.rating < 1 || review.rating > 5) {
-      return res.status(400).json({
-        success: false,
-        message: 'Rating must be between 1 and 5'
-      });
-    }
-    
-    if (review.images && !Array.isArray(review.images)) {
-      review.images = [];
-    }
-    
-    if (review.images && review.images.length > 5) {
-      review.images = review.images.slice(0, 5);
-    }
-    
-    const reviewId = `REV_${Date.now()}`;
-    review.id = reviewId;
-    review.product_id = productId;
-    review.date = new Date().toISOString().split('T')[0];
-    review.created_at = new Date().toISOString();
-    
-    await fetch(`${DB_URL}/reviews/${productId}/${reviewId}.json`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(review)
-    });
-
-    res.json({
-      success: true,
-      message: "Review added successfully",
-      reviewId: reviewId
-    });
-    
-  } catch (error) {
-    console.error('Error adding review:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Server error while adding review'
-    });
-  }
-});
-
 router.delete("/reviews/:productId/:reviewId", async (req, res) => {
   try {
     const { productId, reviewId } = req.params;
     
-    const reviewResponse = await fetch(`${DB_URL}/reviews/${productId}/${reviewId}.json`);
-    if (reviewResponse.ok) {
-      const review = await reviewResponse.json();
-      
-      if (review.images && Array.isArray(review.images)) {
-        review.images.forEach(imageUrl => {
-          if (imageUrl && imageUrl.startsWith('/uploads/reviews/')) {
-            const filename = path.basename(imageUrl);
-            const filePath = path.join('uploads/reviews', filename);
-            
-            if (fs.existsSync(filePath)) {
-              try {
-                fs.unlinkSync(filePath);
-              } catch (error) {
-                console.error('Error deleting file:', error);
-              }
-            }
-          }
-        });
-      }
-    }
-    
+    // Delete review from database
     await fetch(`${DB_URL}/reviews/${productId}/${reviewId}.json`, {
       method: "DELETE"
     });
@@ -700,7 +720,7 @@ router.get("/search", async (req, res) => {
   }
 });
 
-// Upload endpoint for single file
+// Upload endpoint for single file to Firebase Storage
 router.post("/upload", upload.single('image'), async (req, res) => {
   try {
     if (!req.file) {
@@ -710,15 +730,15 @@ router.post("/upload", upload.single('image'), async (req, res) => {
       });
     }
     
-    const fileUrl = `/uploads/reviews/${req.file.filename}`;
+    const uploadedFile = await uploadToFirebaseStorage(req.file, 'general');
     
     res.json({
       success: true,
-      url: fileUrl,
-      filename: req.file.filename,
-      originalname: req.file.originalname,
-      mimetype: req.file.mimetype,
-      size: req.file.size
+      url: uploadedFile.url,
+      fileName: uploadedFile.fileName,
+      originalName: uploadedFile.originalName,
+      mimeType: uploadedFile.mimeType,
+      size: uploadedFile.size
     });
     
   } catch (error) {
@@ -730,11 +750,26 @@ router.post("/upload", upload.single('image'), async (req, res) => {
   }
 });
 
+// Health check endpoint
 router.get("/health", (req, res) => {
   res.json({
     success: true,
     message: "API is running",
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    env: {
+      port: process.env.PORT,
+      firebaseDB: process.env.FIREBASE_DB_URL ? 'Configured' : 'Not Configured',
+      firebaseStorage: process.env.FIREBASE_STORAGE_BUCKET ? 'Configured' : 'Not Configured',
+      firebaseAPIKey: process.env.FIREBASE_API_KEY ? 'Configured' : 'Not Configured'
+    }
+  });
+});
+
+router.get("/test", (req, res) => {
+  res.json({
+    success: true,
+    message: "API is working!",
+    time: new Date().toISOString()
   });
 });
 
