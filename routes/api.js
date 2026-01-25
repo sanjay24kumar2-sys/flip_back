@@ -109,7 +109,62 @@ router.get("/products", async (req, res) => {
     if (!response.ok) {
       throw new Error(`Firebase error: ${response.status}`);
     }
-    
+    // ==================== PRODUCT ROUTE (ONE BY ONE) ====================
+router.get("/products", async (req, res) => {
+  try {
+    const cursor = parseInt(req.query.cursor) || 0;
+
+    console.log(`Fetching product at index: ${cursor}`);
+
+    const response = await fetch(`${DB_URL}/products.json`);
+
+    if (!response.ok) {
+      throw new Error(`Firebase error: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    if (!data) {
+      return res.json({
+        success: true,
+        cursor,
+        hasMore: false,
+        data: null
+      });
+    }
+
+    const products = Object.keys(data).map(key => ({
+      id: key,
+      ...data[key],
+      status: data[key].status || "active"
+    }));
+
+    if (cursor >= products.length) {
+      return res.json({
+        success: true,
+        cursor,
+        hasMore: false,
+        data: null
+      });
+    }
+
+    return res.json({
+      success: true,
+      cursor: cursor + 1,
+      hasMore: cursor + 1 < products.length,
+      data: products[cursor]
+    });
+
+  } catch (error) {
+    console.error("Error fetching product:", error.message);
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+      error: error.message
+    });
+  }
+});
+
     const data = await response.json();
     
     if (data) {
@@ -279,9 +334,7 @@ router.delete("/products/:id", async (req, res) => {
     });
   }
 });
-// ==================== END PRODUCT ROUTES ====================
 
-// ==================== REVIEW ROUTES ====================
 // POST review with images
 router.post("/reviews-with-images/:productId", upload.array("images", 5), async (req, res) => {
   console.log("=== REVIEW UPLOAD START ===");
