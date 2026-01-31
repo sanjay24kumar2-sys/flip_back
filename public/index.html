@@ -542,7 +542,6 @@ body{
     display: none;
 }
 
-/* Flipkart Style Small Loading Progress Bar */
 .flipkart-loader {
     position: fixed;
     top: 0;
@@ -587,7 +586,6 @@ body{
     100% { transform: translateX(100%); }
 }
 
-/* Minimal Loader */
 .minimal-loader {
     display: inline-block;
     width: 16px;
@@ -628,7 +626,6 @@ body{
     }
 }
 
-/* Skeleton Loading Enhancements */
 .skeleton-pulse {
     animation: skeleton-pulse 1.5s ease-in-out infinite;
 }
@@ -654,7 +651,6 @@ body{
 </head>
 <body>
 
-<!-- Flipkart Style Small Loading Progress Bar -->
 <div class="flipkart-loader" id="flipkartLoader">
     <div class="progress" id="progressBar"></div>
 </div>
@@ -713,7 +709,7 @@ body{
 
 <div class="product-section">
     <div class="product-grid" id="productGrid">
-        <!-- Skeleton loading will be shown initially -->
+        <!-- Skeleton loading -->
         <div class="skeleton-card skeleton-pulse">
             <div class="skeleton-img"></div>
             <div class="skeleton-content">
@@ -892,7 +888,6 @@ class ProductManager {
         this.isLoading = true;
         this.loaderManager.show();
         
-        // Show loading status
         this.productGrid.innerHTML = `
             <div class="loading-status">
                 <div class="minimal-loader">
@@ -908,7 +903,6 @@ class ProductManager {
             this.displayAllProducts();
             this.loaderManager.complete();
             
-            // Fetch fresh data in background
             this.fetchFreshProducts();
             return;
         }
@@ -1108,8 +1102,13 @@ class ProductManager {
         }
         
         const productName = p.name || "Product Name";
+        
+        // YAHI CHANGE KIYA HAI - ek hi badge dikhayega
+        // Pehle bestseller check karo, agar bestseller hai to wahi dikhao
+        // Agar bestseller nahi hai to trending check karo
         const isBestseller = index % 3 === 0;
-        const isTrending = index % 5 === 0;
+        const isTrending = !isBestseller && (index % 5 === 0); // Sirf agar bestseller nahi hai to trending
+        
         const rating = (Math.random() * 2 + 3).toFixed(1);
         const ratingCount = Math.floor(Math.random() * 1000) + 100;
         

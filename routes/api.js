@@ -118,14 +118,12 @@ router.get("/products", async (req, res) => {
     const result = { success: true, data: paginated, total: allProducts.length };
     setCache(cacheKey, result, CACHE_TTL_PRODUCTS);
 
-    // also warmup first page cache if this is page 1
     if (page === 1) setCache("products:page1:limit20", result, CACHE_TTL_PRODUCTS);
 
     res.json(result);
   } catch (e) {
     console.error("Product fetch failed:", e.message);
 
-    // fallback: if cache exists, send stale data
     cached = getCache("products:page1:limit20");
     if (cached) return res.json({ ...cached, warning: "Using stale cache" });
 
@@ -144,8 +142,8 @@ router.post("/products", async (req, res) => {
     body: JSON.stringify({ ...p, created_at: new Date().toISOString() })
   });
 
-  cache.clear(); // clear all cache
-  warmUpCache(); // refresh first page
+  cache.clear();
+  warmUpCache();
   res.json({ success: true });
 });
 

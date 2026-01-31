@@ -372,17 +372,14 @@ body {
 <script>
 const PRODUCTS_API = "/api/products";
 
-// Get URL parameters
 
 const params = new URLSearchParams(window.location.search);
 const productId = params.get("id");
 const method = params.get("method") || "UPI";
 
-// Generate IDs
 const orderId = "OD" + Date.now();
 const txnId = "TXN" + Math.floor(Math.random() * 1e9);
 
-// Update UI with order details
 document.getElementById("orderId").innerText = "Order ID: " + orderId;
 document.getElementById("method").innerText = "Payment Method: " + method;
 document.getElementById("time").innerText = "Time: " + new Date().toLocaleString('en-IN', {
@@ -394,7 +391,6 @@ document.getElementById("time").innerText = "Time: " + new Date().toLocaleString
   hour12: true
 });
 
-// Fetch product details and update amount
 async function loadAmount() {
   if (!productId) return;
 
