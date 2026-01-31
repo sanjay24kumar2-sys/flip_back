@@ -1,5 +1,6 @@
 require("dotenv").config();
 require("dns").setDefaultResultOrder("ipv4first");
+
 const express = require("express");
 const path = require("path");
 const cors = require("cors");
@@ -8,79 +9,76 @@ const os = require("os");
 
 const app = express();
 
-app.use(helmet({ 
-  contentSecurityPolicy: false,
-  crossOriginEmbedderPolicy: false,
-  crossOriginResourcePolicy: { policy: "cross-origin" }
-}));
+// Security
+app.use(
+  helmet({
+    contentSecurityPolicy: false,
+    crossOriginEmbedderPolicy: false,
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+  })
+);
 
-app.use(cors({
-  origin: "*",
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"],
-  allowedHeaders: ["*"],
-  exposedHeaders: ["Content-Range", "X-Content-Range"]
-}));
+// CORS
+app.use(
+  cors({
+    origin: "*",
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
 
-app.options("*", (req, res) => {
-  res.header("Access-Control-Allow-Origin", "*");
-  res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS,PATCH,HEAD");
-  res.header("Access-Control-Allow-Headers", "*");
-  res.sendStatus(200);
-});
+// Body parser
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true }));
 
-app.use(express.json({ limit: "50mb" }));
-app.use(express.urlencoded({ extended: true, limit: "50mb" }));
+// Static files
 app.use(express.static(path.join(__dirname, "public")));
 
-app.use((req, res, next) => {
-  res.header("X-Powered-By", "Express");
-  res.header("X-Forwarded-Proto", req.protocol);
-  next();
+// API routes
+const apiModule = require("./routes/api");
+app.use("/api", apiModule.router); // <-- notice router export
+
+// Pages
+app.get("/", (req, res) =>
+  res.sendFile(path.join(__dirname, "public/product-list.html"))
+);
+app.get("/flipkart", (req, res) =>
+  res.sendFile(path.join(__dirname, "public/index.html"))
+);
+
+// Health
+app.get("/health", (req, res) => {
+  res.json({ success: true, status: "OK" });
 });
 
-const apiRoutes = require("./routes/api");
-app.use("/api", apiRoutes);
-
-app.get("/", (req, res) => res.sendFile(path.join(__dirname, "public/product-list.html")));
-app.get("/products", (req, res) => res.sendFile(path.join(__dirname, "public/product-list.html")));
-app.get("/add-product.html", (req, res) => res.sendFile(path.join(__dirname, "public/add-product.html")));
-
-app.get("/health", (req, res) => res.json({ 
-  success: true, 
-  message: "Server Running",
-  ip: req.ip,
-  network: "Active"
-}));
-
+// Error handler
 app.use((err, req, res, next) => {
-  if (err.code === "LIMIT_FILE_SIZE") return res.status(400).json({ success: false, message: "File too large" });
-  if (err.code === "LIMIT_FILE_COUNT") return res.status(400).json({ success: false, message: "Max 5 files" });
-  res.status(500).json({ success: false, message: "Server error" });
+  console.error(err);
+  res.status(500).json({ success: false, message: "Server Error" });
 });
 
+// Get Local IP
 function getIP() {
-  const interfaces = os.networkInterfaces();
-  for (const iface in interfaces) {
-    for (const config of interfaces[iface]) {
-      if (config.family === 'IPv4' && !config.internal) return config.address;
+  const nets = os.networkInterfaces();
+  for (const name of Object.keys(nets)) {
+    for (const net of nets[name]) {
+      if (net.family === "IPv4" && !net.internal) return net.address;
     }
   }
-  return '127.0.0.1';
+  return "localhost";
 }
 
 const PORT = process.env.PORT || 3000;
-const HOST = "0.0.0.0";
+app.listen(PORT, "0.0.0.0", async () => {
+  console.log(` Local   : http://localhost:${PORT}`);
+  console.log(` Network: http://${getIP()}:${PORT}`);
 
-const server = app.listen(PORT, HOST, () => {
-  const ip = getIP();
-  console.log(` Server: http://localhost:${PORT}`);
-  console.log(` Network: http://${ip}:${PORT}`);
+  if (typeof apiModule.warmUpCache === "function") {
+    try {
+      await apiModule.warmUpCache();
+      console.log(" Cache warmup done");
+    } catch (e) {
+      console.warn("Warmup error ignored:", e.message);
+    }
+  }
 });
-
-server.keepAliveTimeout = 65000;
-server.headersTimeout = 66000;
-server.setTimeout(30000);
-
-process.on("uncaughtException", () => {});
-process.on("unhandledRejection", () => {});

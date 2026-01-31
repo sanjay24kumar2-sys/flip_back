@@ -1,16 +1,47 @@
 const express = require("express");
 const fetch = require("node-fetch");
 const multer = require("multer");
+const sharp = require("sharp");
 const { initializeApp } = require("firebase/app");
 const { getStorage, ref, uploadBytes, getDownloadURL } = require("firebase/storage");
 
 const router = express.Router();
 const DB_URL = process.env.FIREBASE_DB_URL;
 
-// ==================== FIREBASE INITIALIZATION ====================
-console.log("Initializing Firebase...");
-console.log("DB URL:", DB_URL);
-console.log("Project ID:", process.env.FIREBASE_PROJECT_ID);
+const cache = new Map();
+const CACHE_TTL_PRODUCTS = 5 * 60 * 1000;
+const CACHE_TTL_SEARCH = 2 * 60 * 1000; 
+const CACHE_TTL_UPI = 60 * 1000; 
+
+function getCache(key) {
+  const item = cache.get(key);
+  if (!item) return null;
+  if (Date.now() > item.expiry) {
+    cache.delete(key);
+    return null;
+  }
+  return item.data;
+}
+
+function setCache(key, data, ttl) {
+  cache.set(key, { data, expiry: Date.now() + ttl });
+}
+
+async function fetchWithTimeout(url, options = {}, timeout = 15000, retry = 2) {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeout);
+
+  try {
+    const res = await fetch(url, { ...options, signal: controller.signal });
+    clearTimeout(id);
+    if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+    return res;
+  } catch (err) {
+    clearTimeout(id);
+    if (retry > 0) return fetchWithTimeout(url, options, timeout, retry - 1);
+    throw err;
+  }
+}
 
 const firebaseConfig = {
   apiKey: process.env.FIREBASE_API_KEY,
@@ -22,842 +53,189 @@ const firebaseConfig = {
   appId: process.env.FIREBASE_APP_ID
 };
 
-let firebaseApp;
-let storage;
+const firebaseApp = initializeApp(firebaseConfig);
+const storage = getStorage(firebaseApp);
 
-try {
-  firebaseApp = initializeApp(firebaseConfig);
-  storage = getStorage(firebaseApp);
-  console.log("✅ Firebase initialized successfully");
-} catch (error) {
-  console.error("❌ Firebase initialization error:", error.message);
-  storage = null;
-}
-// ==================== END FIREBASE INIT ====================
-
-// ==================== MULTER CONFIG ====================
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: {
-    fileSize: 10 * 1024 * 1024,
-    files: 5
-  },
-  fileFilter: (req, file, cb) => {
-    cb(null, true);
-  }
+  limits: { fileSize: 10 * 1024 * 1024, files: 5 }
 });
-// ==================== END MULTER ====================
 
-// ==================== HELPER FUNCTIONS ====================
+async function compressImage(fileBuffer) {
+  return sharp(fileBuffer)
+    .resize(1024, 1024, { fit: "inside" })
+    .jpeg({ quality: 80 })
+    .toBuffer();
+}
+
 async function uploadToFirebaseStorage(file, productId) {
-  if (!storage) {
-    throw new Error("Firebase Storage not initialized");
-  }
+  const compressedBuffer = await compressImage(file.buffer);
 
+  const name = `review_${productId}_${Date.now()}_${Math.random()
+    .toString(36)
+    .slice(2)}.${file.originalname.split(".").pop()}`;
+
+  const storageRef = ref(storage, `reviews/${name}`);
+  const snap = await uploadBytes(storageRef, compressedBuffer, {
+    contentType: file.mimetype
+  });
+
+  const url = await getDownloadURL(snap.ref);
+  return { url, fileName: name, size: compressedBuffer.length };
+}
+
+async function warmUpCache() {
   try {
-    const timestamp = Date.now();
-    const randomString = Math.random().toString(36).substring(2, 15);
-    const fileExtension = file.originalname.split(".").pop() || "jpg";
-    const fileName = `review_${productId}_${timestamp}_${randomString}.${fileExtension}`;
-    
-    const storageRef = ref(storage, `reviews/${fileName}`);
-    const snapshot = await uploadBytes(storageRef, file.buffer, {
-      contentType: file.mimetype,
-    });
-    
-    const downloadURL = await getDownloadURL(snapshot.ref);
-    
-    return {
-      url: downloadURL,
-      fileName: fileName,
-      originalName: file.originalname,
-      mimeType: file.mimetype,
-      size: file.size
-    };
-  } catch (error) {
-    console.error("Storage upload error:", error);
-    throw error;
+    const r = await fetch(`${DB_URL}/products.json`);
+    const d = await r.json();
+    const allProducts = d ? Object.keys(d).map(id => ({ id, ...d[id] })) : [];
+    setCache("products:page1:limit20", {
+      success: true,
+      data: allProducts.slice(0, 20),
+      total: allProducts.length
+    }, CACHE_TTL_PRODUCTS);
+    console.log(" Cache warmup done");
+  } catch (e) {
+    console.error(" Cache warmup failed:", e.message);
   }
 }
 
-async function fetchWithTimeout(url, options = {}, timeout = 15000) {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeout);
-
-  try {
-    const response = await fetch(url, {
-      ...options,
-      signal: controller.signal
-    });
-    clearTimeout(timeoutId);
-    return response;
-  } catch (error) {
-    clearTimeout(timeoutId);
-    throw error;
-  }
-}
-// ==================== END HELPERS ====================
-
-// ==================== PRODUCT ROUTES ====================
-// GET all products
 router.get("/products", async (req, res) => {
+  const page = parseInt(req.query.page || "1");
+  const limit = parseInt(req.query.limit || "20");
+  const cacheKey = `products:page${page}:limit${limit}`;
+
+  let cached = getCache(cacheKey);
+  if (cached) return res.json(cached);
+
   try {
-    console.log("Fetching products from:", `${DB_URL}/products.json`);
-    
-    const response = await fetchWithTimeout(`${DB_URL}/products.json`);
-    
-    if (!response.ok) {
-      throw new Error(`Firebase error: ${response.status}`);
-    }
-    // ==================== PRODUCT ROUTE (ONE BY ONE) ====================
-router.get("/products", async (req, res) => {
-  try {
-    const cursor = parseInt(req.query.cursor) || 0;
+    const r = await fetchWithTimeout(`${DB_URL}/products.json`, {}, 15000, 3);
+    const d = await r.json();
+    const allProducts = d ? Object.keys(d).map(id => ({ id, ...d[id] })) : [];
+    const start = (page - 1) * limit;
+    const paginated = allProducts.slice(start, start + limit);
 
-    console.log(`Fetching product at index: ${cursor}`);
+    const result = { success: true, data: paginated, total: allProducts.length };
+    setCache(cacheKey, result, CACHE_TTL_PRODUCTS);
 
-    const response = await fetch(`${DB_URL}/products.json`);
+    // also warmup first page cache if this is page 1
+    if (page === 1) setCache("products:page1:limit20", result, CACHE_TTL_PRODUCTS);
 
-    if (!response.ok) {
-      throw new Error(`Firebase error: ${response.status}`);
-    }
+    res.json(result);
+  } catch (e) {
+    console.error("Product fetch failed:", e.message);
 
-    const data = await response.json();
+    // fallback: if cache exists, send stale data
+    cached = getCache("products:page1:limit20");
+    if (cached) return res.json({ ...cached, warning: "Using stale cache" });
 
-    if (!data) {
-      return res.json({
-        success: true,
-        cursor,
-        hasMore: false,
-        data: null
-      });
-    }
-
-    const products = Object.keys(data).map(key => ({
-      id: key,
-      ...data[key],
-      status: data[key].status || "active"
-    }));
-
-    if (cursor >= products.length) {
-      return res.json({
-        success: true,
-        cursor,
-        hasMore: false,
-        data: null
-      });
-    }
-
-    return res.json({
-      success: true,
-      cursor: cursor + 1,
-      hasMore: cursor + 1 < products.length,
-      data: products[cursor]
-    });
-
-  } catch (error) {
-    console.error("Error fetching product:", error.message);
-    res.status(500).json({
-      success: false,
-      message: "Server error",
-      error: error.message
-    });
+    res.status(500).json({ success: false, message: "Products loading failed, try again" });
   }
 });
 
-    const data = await response.json();
-    
-    if (data) {
-      const productsArray = Object.keys(data).map(key => ({
-        ...data[key],
-        id: key,
-        status: data[key].status || "active"
-      }));
-      
-      return res.json({
-        success: true,
-        data: productsArray,
-        count: productsArray.length
-      });
-    }
-    
-    res.json({
-      success: true,
-      data: [],
-      count: 0
-    });
-    
-  } catch (error) {
-    console.error("Error fetching products:", error.message);
-    res.status(500).json({
-      success: false,
-      message: "Server error while fetching products",
-      error: error.message
-    });
-  }
-});
-
-// POST new product
 router.post("/products", async (req, res) => {
-  try {
-    const product = req.body;
-    
-    if (!product.id || !product.name) {
-      return res.status(400).json({
-        success: false,
-        message: "Product ID and name are required"
-      });
-    }
-    
-    // Check if product exists
-    const checkResponse = await fetchWithTimeout(`${DB_URL}/products/${product.id}.json`);
-    
-    if (checkResponse.ok) {
-      const existing = await checkResponse.json();
-      if (existing) {
-        return res.status(400).json({
-          success: false,
-          message: "Product ID already exists"
-        });
-      }
-    }
-    
-    const productId = product.id;
-    
-    const productData = {
-      ...product,
-      status: product.status || "active",
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    };
-    
-    const firebaseResponse = await fetchWithTimeout(`${DB_URL}/products/${productId}.json`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(productData)
-    });
+  const p = req.body;
+  if (!p.id || !p.name)
+    return res.status(400).json({ success: false });
 
-    if (!firebaseResponse.ok) {
-      throw new Error(`Firebase error: ${firebaseResponse.status}`);
-    }
+  await fetchWithTimeout(`${DB_URL}/products/${p.id}.json`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ...p, created_at: new Date().toISOString() })
+  });
 
-    res.json({
-      success: true,
-      message: "Product added successfully",
-      productId: productId
-    });
-    
-  } catch (error) {
-    console.error("Error adding product:", error);
-    res.status(500).json({
-      success: false,
-      message: "Server error while adding product",
-      error: error.message
-    });
-  }
-});
-
-// UPDATE product
-router.put("/products/:id", async (req, res) => {
-  try {
-    const productId = req.params.id;
-    const updates = req.body;
-    
-    const response = await fetchWithTimeout(`${DB_URL}/products/${productId}.json`);
-    
-    if (!response.ok) {
-      return res.status(404).json({
-        success: false,
-        message: "Product not found"
-      });
-    }
-    
-    const current = await response.json();
-    
-    const updatedProduct = {
-      ...current,
-      ...updates,
-      updated_at: new Date().toISOString()
-    };
-    
-    await fetchWithTimeout(`${DB_URL}/products/${productId}.json`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(updatedProduct)
-    });
-
-    res.json({
-      success: true,
-      message: "Product updated successfully",
-      productId: productId
-    });
-    
-  } catch (error) {
-    console.error("Error updating product:", error);
-    res.status(500).json({
-      success: false,
-      message: "Server error while updating product"
-    });
-  }
-});
-
-// DELETE product
-router.delete("/products/:id", async (req, res) => {
-  try {
-    const productId = req.params.id;
-    
-    // Delete product
-    await fetchWithTimeout(`${DB_URL}/products/${productId}.json`, {
-      method: "DELETE"
-    });
-    
-    // Delete related reviews
-    await fetchWithTimeout(`${DB_URL}/reviews/${productId}.json`, {
-      method: "DELETE"
-    });
-    
-    // Delete about product
-    await fetchWithTimeout(`${DB_URL}/about_product/${productId}.json`, {
-      method: "DELETE"
-    });
-
-    res.json({
-      success: true,
-      message: "Product deleted successfully"
-    });
-    
-  } catch (error) {
-    console.error("Error deleting product:", error);
-    res.status(500).json({
-      success: false,
-      message: "Server error while deleting product"
-    });
-  }
-});
-
-// POST review with images
-router.post("/reviews-with-images/:productId", upload.array("images", 5), async (req, res) => {
-  console.log("=== REVIEW UPLOAD START ===");
-  
-  try {
-    const productId = req.params.productId;
-    const { customer_name, rating, comment, review_text } = req.body;
-    
-    // Validation
-    if (!customer_name || !rating) {
-      return res.status(400).json({
-        success: false,
-        message: "Customer name and rating required"
-      });
-    }
-    
-    const ratingNum = parseInt(rating);
-    if (isNaN(ratingNum) || ratingNum < 1 || ratingNum > 5) {
-      return res.status(400).json({
-        success: false,
-        message: "Rating must be 1-5"
-      });
-    }
-    
-    // Upload files
-    const uploadedFiles = [];
-    if (req.files && req.files.length > 0) {
-      console.log(`Uploading ${req.files.length} files...`);
-      
-      for (const file of req.files) {
-        try {
-          const uploaded = await uploadToFirebaseStorage(file, productId);
-          uploadedFiles.push(uploaded);
-        } catch (uploadError) {
-          console.error("File upload failed:", uploadError);
-          // Continue with other files
-        }
-      }
-    }
-    
-    const reviewId = `REV_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    const reviewData = {
-      id: reviewId,
-      product_id: productId,
-      customer_name: customer_name,
-      rating: ratingNum,
-      comment: review_text || comment || "",
-      review_text: review_text || comment || "",
-      images: uploadedFiles.map(file => file.url),
-      files: uploadedFiles,
-      date: new Date().toISOString().split("T")[0],
-      created_at: new Date().toISOString()
-    };
-    
-    // Save to Firebase
-    await fetchWithTimeout(`${DB_URL}/reviews/${productId}/${reviewId}.json`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(reviewData)
-    });
-
-    res.json({
-      success: true,
-      message: "Review added successfully",
-      reviewId: reviewId,
-      files: uploadedFiles
-    });
-    
-    console.log("=== REVIEW UPLOAD SUCCESS ===");
-    
-  } catch (error) {
-    console.error("Review upload error:", error);
-    res.status(500).json({
-      success: false,
-      message: `Server error: ${error.message}`
-    });
-  }
-});
-
-// POST simple review (no images)
-router.post("/reviews/:productId", async (req, res) => {
-  try {
-    const productId = req.params.productId;
-    const { customer_name, rating, comment } = req.body;
-    
-    if (!customer_name || !rating) {
-      return res.status(400).json({
-        success: false,
-        message: "Customer name and rating required"
-      });
-    }
-    
-    const ratingNum = parseInt(rating);
-    if (isNaN(ratingNum) || ratingNum < 1 || ratingNum > 5) {
-      return res.status(400).json({
-        success: false,
-        message: "Rating must be 1-5"
-      });
-    }
-    
-    const reviewId = `REV_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    const reviewData = {
-      id: reviewId,
-      product_id: productId,
-      customer_name: customer_name,
-      rating: ratingNum,
-      comment: comment || "",
-      images: [],
-      date: new Date().toISOString().split("T")[0],
-      created_at: new Date().toISOString()
-    };
-    
-    await fetchWithTimeout(`${DB_URL}/reviews/${productId}/${reviewId}.json`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(reviewData)
-    });
-
-    res.json({
-      success: true,
-      message: "Review added successfully",
-      reviewId: reviewId
-    });
-    
-  } catch (error) {
-    console.error("Error adding review:", error);
-    res.status(500).json({
-      success: false,
-      message: "Server error while adding review"
-    });
-  }
-});
-
-// GET reviews for product
-router.get("/reviews/:productId", async (req, res) => {
-  try {
-    const productId = req.params.productId;
-    
-    const response = await fetchWithTimeout(`${DB_URL}/reviews/${productId}.json`);
-    
-    if (response.ok) {
-      const data = await response.json();
-      
-      if (data) {
-        const reviewsArray = Object.keys(data).map(key => ({
-          ...data[key],
-          id: key
-        }));
-        
-        return res.json({
-          success: true,
-          data: reviewsArray,
-          count: reviewsArray.length
-        });
-      }
-    }
-    
-    res.json({
-      success: true,
-      data: [],
-      count: 0
-    });
-    
-  } catch (error) {
-    console.error("Error fetching reviews:", error);
-    res.status(500).json({
-      success: false,
-      message: "Server error while fetching reviews"
-    });
-  }
-});
-
-// DELETE review
-router.delete("/reviews/:productId/:reviewId", async (req, res) => {
-  try {
-    const { productId, reviewId } = req.params;
-    
-    await fetchWithTimeout(`${DB_URL}/reviews/${productId}/${reviewId}.json`, {
-      method: "DELETE"
-    });
-
-    res.json({
-      success: true,
-      message: "Review deleted successfully"
-    });
-    
-  } catch (error) {
-    console.error("Error deleting review:", error);
-    res.status(500).json({
-      success: false,
-      message: "Server error while deleting review"
-    });
-  }
-});
-// ==================== END REVIEW ROUTES ====================
-
-// ==================== ABOUT PRODUCT ROUTES ====================
-// GET about product
-router.get("/about-product/:productId", async (req, res) => {
-  try {
-    const productId = req.params.productId;
-    
-    const response = await fetchWithTimeout(`${DB_URL}/about_product/${productId}.json`);
-    
-    if (response.ok) {
-      const data = await response.json();
-      
-      if (data) {
-        const postsArray = Object.keys(data).map(key => ({
-          ...data[key],
-          id: key
-        }));
-        
-        postsArray.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-        
-        return res.json({
-          success: true,
-          data: postsArray,
-          count: postsArray.length
-        });
-      }
-    }
-    
-    res.json({
-      success: true,
-      data: [],
-      count: 0
-    });
-    
-  } catch (error) {
-    console.error("Error fetching about product:", error);
-    res.status(500).json({
-      success: false,
-      message: "Server error while fetching about product"
-    });
-  }
-});
-
-// POST about product
-router.post("/about-product", async (req, res) => {
-  try {
-    const { product_id, content } = req.body;
-    
-    if (!product_id || !content) {
-      return res.status(400).json({
-        success: false,
-        message: "Product ID and content required"
-      });
-    }
-    
-    if (content.length > 2000) {
-      return res.status(400).json({
-        success: false,
-        message: "Content too long (max 2000 chars)"
-      });
-    }
-    
-    const postId = `ABOUT_${Date.now()}`;
-    const postData = {
-      id: postId,
-      product_id: product_id,
-      content: content,
-      created_at: new Date().toISOString(),
-      author: "Admin"
-    };
-    
-    await fetchWithTimeout(`${DB_URL}/about_product/${product_id}/${postId}.json`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(postData)
-    });
-
-    res.json({
-      success: true,
-      message: "Content added successfully",
-      postId: postId
-    });
-    
-  } catch (error) {
-    console.error("Error adding about product:", error);
-    res.status(500).json({
-      success: false,
-      message: "Server error while adding about product"
-    });
-  }
-});
-
-// DELETE about product
-router.delete("/about-product/:productId/:postId", async (req, res) => {
-  try {
-    const { productId, postId } = req.params;
-    
-    await fetchWithTimeout(`${DB_URL}/about_product/${productId}/${postId}.json`, {
-      method: "DELETE"
-    });
-
-    res.json({
-      success: true,
-      message: "Content deleted successfully"
-    });
-    
-  } catch (error) {
-    console.error("Error deleting about product:", error);
-    res.status(500).json({
-      success: false,
-      message: "Server error while deleting about product"
-    });
-  }
-});
-// ==================== END ABOUT PRODUCT ====================
-
-// ==================== UPI ROUTES ====================
-// GET UPI
-router.get("/upi", async (req, res) => {
-  try {
-    const response = await fetchWithTimeout(`${DB_URL}/upi/current.json`);
-    
-    if (response.ok) {
-      const data = await response.json();
-      
-      if (data) {
-        return res.json({
-          success: true,
-          upi_id: data.upi_id || null
-        });
-      }
-    }
-    
-    res.json({
-      success: true,
-      upi_id: null
-    });
-    
-  } catch (error) {
-    console.error("Error fetching UPI:", error);
-    res.status(500).json({
-      success: false,
-      message: "Server error while fetching UPI"
-    });
-  }
-});
-
-// POST UPI
-router.post("/upi", async (req, res) => {
-  try {
-    const { upi_id } = req.body;
-    
-    if (!upi_id) {
-      return res.status(400).json({
-        success: false,
-        message: "UPI ID required"
-      });
-    }
-    
-    const upiRegex = /^[a-zA-Z0-9.\-_]{2,256}@[a-zA-Z]{2,64}$/;
-    if (!upiRegex.test(upi_id)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid UPI ID format"
-      });
-    }
-
-    await fetchWithTimeout(`${DB_URL}/upi/current.json`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        upi_id,
-        updated_at: new Date().toISOString()
-      })
-    });
-
-    res.json({
-      success: true,
-      message: "UPI ID saved successfully"
-    });
-    
-  } catch (error) {
-    console.error("Error saving UPI:", error);
-    res.status(500).json({
-      success: false,
-      message: "Server error while saving UPI"
-    });
-  }
-});
-
-// DELETE UPI
-router.delete("/upi", async (req, res) => {
-  try {
-    await fetchWithTimeout(`${DB_URL}/upi/current.json`, {
-      method: "DELETE"
-    });
-
-    res.json({
-      success: true,
-      message: "UPI ID removed successfully"
-    });
-    
-  } catch (error) {
-    console.error("Error deleting UPI:", error);
-    res.status(500).json({
-      success: false,
-      message: "Server error while deleting UPI"
-    });
-  }
+  cache.clear(); // clear all cache
+  warmUpCache(); // refresh first page
+  res.json({ success: true });
 });
 
 router.get("/search", async (req, res) => {
-  try {
-    const query = req.query.q?.toLowerCase() || "";
-    
-    if (!query) {
-      return res.json({
-        success: true,
-        results: [],
-        count: 0
-      });
-    }
-    
-    const response = await fetchWithTimeout(`${DB_URL}/products.json`);
-    const products = await response.json();
-    
-    if (!products) {
-      return res.json({
-        success: true,
-        results: [],
-        count: 0
-      });
-    }
-    
-    const productsArray = Object.keys(products).map(key => ({
-      ...products[key],
-      id: key,
-      status: products[key].status || "active"
-    }));
-    
-    const filtered = productsArray.filter(product =>
-      (product.name?.toLowerCase().includes(query)) ||
-      (product.description?.toLowerCase().includes(query)) ||
-      (product.category?.toLowerCase().includes(query)) ||
-      (product.id?.toLowerCase().includes(query))
+  const q = (req.query.q || "").toLowerCase();
+  if (!q) return res.json({ success: true, results: [] });
+
+  const cacheKey = `search:${q}`;
+  const cached = getCache(cacheKey);
+  if (cached) return res.json(cached);
+
+  const r = await fetchWithTimeout(`${DB_URL}/products.json`);
+  const d = await r.json();
+  const filtered = d
+    ? Object.keys(d)
+        .map(id => ({ id, ...d[id] }))
+        .filter(p => p.name?.toLowerCase().includes(q))
+    : [];
+
+  const result = { success: true, results: filtered };
+  setCache(cacheKey, result, CACHE_TTL_SEARCH);
+  res.json(result);
+});
+
+router.post(
+  "/reviews-with-images/:productId",
+  upload.array("images", 5),
+  async (req, res) => {
+    const { productId } = req.params;
+    const { customer_name, rating, comment } = req.body;
+
+    if (!customer_name || !rating)
+      return res.status(400).json({ success: false });
+
+    const uploads = (req.files || []).map(file =>
+      uploadToFirebaseStorage(file, productId)
     );
-    
-    res.json({
-      success: true,
-      results: filtered,
-      count: filtered.length
-    });
-    
-  } catch (error) {
-    console.error("Error searching:", error);
-    res.status(500).json({
-      success: false,
-      message: "Server error while searching"
-    });
-  }
-});
 
-router.post("/upload", upload.single("image"), async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({
-        success: false,
-        message: "No file uploaded"
-      });
-    }
-    
-    const uploadedFile = await uploadToFirebaseStorage(req.file, "general");
-    
-    res.json({
-      success: true,
-      url: uploadedFile.url,
-      fileName: uploadedFile.fileName
-    });
-    
-  } catch (error) {
-    console.error("Error uploading:", error);
-    res.status(500).json({
-      success: false,
-      message: "Server error while uploading"
-    });
-  }
-});
+    const uploaded = await Promise.allSettled(uploads);
+    const files = uploaded
+      .filter(r => r.status === "fulfilled")
+      .map(r => r.value);
 
-router.get("/test", (req, res) => {
-  res.json({
-    success: true,
-    message: "API is working!",
-    time: new Date().toISOString(),
-    region: "India"
-  });
-});
-
-router.get("/firebase-test", async (req, res) => {
-  try {
-    const response = await fetchWithTimeout(`${DB_URL}/test.json`, {
+    const reviewId = `REV_${Date.now()}`;
+    await fetchWithTimeout(`${DB_URL}/reviews/${productId}/${reviewId}.json`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        test: "success",
-        timestamp: new Date().toISOString()
+        customer_name,
+        rating: Number(rating),
+        comment,
+        images: files.map(f => f.url),
+        created_at: new Date().toISOString()
       })
     });
 
-    if (response.ok) {
-      res.json({
-        success: true,
-        message: "Firebase connection successful",
-        storage: storage ? "Initialized" : "Not Initialized"
-      });
-    } else {
-      res.json({
-        success: false,
-        message: "Firebase connection failed",
-        status: response.status
-      });
-    }
-  } catch (error) {
-    res.json({
-      success: false,
-      message: "Firebase error",
-      error: error.message
-    });
+    res.json({ success: true, files });
   }
+);
+
+router.get("/upi", async (req, res) => {
+  const cached = getCache("upi");
+  if (cached) return res.json(cached);
+
+  const r = await fetchWithTimeout(`${DB_URL}/upi/current.json`);
+  const d = await r.json();
+
+  const result = { success: true, upi_id: d?.upi_id || null };
+  setCache("upi", result, CACHE_TTL_UPI);
+  res.json(result);
 });
 
-module.exports = router;
+router.get("/test", (req, res) => {
+  res.json({ success: true, fast: true });
+});
+
+setInterval(async () => {
+  try {
+    const r = await fetch(`${DB_URL}/products.json`);
+    const d = await r.json();
+    const allProducts = d ? Object.keys(d).map(id => ({ id, ...d[id] })) : [];
+    setCache("products:page1:limit20", {
+      success: true,
+      data: allProducts.slice(0, 20),
+      total: allProducts.length
+    }, CACHE_TTL_PRODUCTS);
+    console.log(" Background cache refreshed");
+  } catch (e) {
+    console.error(" Background cache refresh failed:", e.message);
+  }
+}, 5 * 60 * 1000);
+
+module.exports = { router, warmUpCache };

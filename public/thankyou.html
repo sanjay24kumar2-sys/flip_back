@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Payment Pending</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+<style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Roboto', Arial, sans-serif;
+}
+
+body {
+  background: #f1f3f6;
+  color: #212121;
+  line-height: 1.4;
+}
+
+/* HEADER - Flipkart Style */
+.header {
+  background: #2874f0;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  box-shadow: 0 1px 10px rgba(0, 0, 0, 0.1);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.header a {
+  color: white;
+  font-size: 24px;
+  text-decoration: none;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.header h1 {
+  color: white;
+  font-size: 18px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+}
+
+/* CONTAINER */
+.container {
+  max-width: 500px;
+  margin: 20px auto;
+  padding: 0 16px;
+}
+
+/* CARD */
+.card {
+  background: white;
+  padding: 24px;
+  margin-bottom: 16px;
+  border-radius: 3px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e0e0e0;
+}
+
+/* STATUS SECTION */
+.status {
+  text-align: center;
+  padding: 30px 20px;
+}
+
+.status-icon {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ff9f00, #ff9f00);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+.status-icon i {
+  color: white;
+  font-size: 36px;
+}
+
+.status h2 {
+  font-size: 22px;
+  font-weight: 500;
+  margin-bottom: 8px;
+  color: #212121;
+}
+
+.status p {
+  font-size: 14px;
+  color: #878787;
+  margin-bottom: 4px;
+}
+
+.order-id {
+  margin-top: 20px;
+  font-size: 14px;
+  color: #2874f0;
+  background: #f0f8ff;
+  display: inline-block;
+  padding: 8px 16px;
+  border-radius: 4px;
+  border: 1px dashed #2874f0;
+  font-weight: 500;
+}
+
+/* ALERT BOX - Flipkart Style */
+.alert-box {
+  background: #fff8e1;
+  border-left: 4px solid #ff9f00;
+  padding: 16px;
+  border-radius: 2px;
+  margin-top: 10px;
+}
+
+.alert-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+  align-items: flex-start;
+}
+
+.alert-row:last-child {
+  margin-bottom: 0;
+}
+
+.alert-icon {
+  color: #ff9f00;
+  font-size: 16px;
+  margin-top: 2px;
+  min-width: 16px;
+}
+
+.alert-text {
+  font-size: 13px;
+  color: #5a5a5a;
+  line-height: 1.5;
+}
+
+.alert-text b {
+  color: #212121;
+}
+
+/* AMOUNT CARD */
+.amount-card {
+  text-align: center;
+  border-top: 3px solid #2874f0;
+  padding-top: 20px;
+}
+
+.amount-card h3 {
+  font-size: 14px;
+  font-weight: 500;
+  color: #878787;
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.amount {
+  font-size: 36px;
+  font-weight: 600;
+  color: #212121;
+  margin-bottom: 8px;
+}
+
+.amount span {
+  color: #ff9f00;
+}
+
+.details {
+  font-size: 13px;
+  color: #878787;
+  margin-bottom: 4px;
+}
+
+/* BUTTONS - Flipkart Style */
+.buttons {
+  display: flex;
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.btn {
+  flex: 1;
+  padding: 16px 0;
+  font-size: 15px;
+  font-weight: 500;
+  border-radius: 2px;
+  border: none;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn-primary {
+  background: #fb641b;
+  color: white;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.2);
+}
+
+.btn-primary:hover {
+  background: #e55a17;
+  box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.2);
+}
+
+.btn-secondary {
+  background: white;
+  color: #2874f0;
+  border: 1px solid #2874f0;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.1);
+}
+
+.btn-secondary:hover {
+  background: #f7f9ff;
+  box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.15);
+}
+
+/* FOOTER */
+.footer {
+  text-align: center;
+  margin-top: 30px;
+  padding: 20px;
+  font-size: 12px;
+  color: #878787;
+  border-top: 1px solid #e0e0e0;
+}
+
+.footer a {
+  color: #2874f0;
+  text-decoration: none;
+}
+
+/* LOADING ANIMATION */
+.loading-dots {
+  display: inline-flex;
+  gap: 4px;
+  margin-left: 5px;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  background: #878787;
+  border-radius: 50%;
+  animation: bounce 1.4s infinite ease-in-out both;
+}
+
+.dot:nth-child(1) { animation-delay: -0.32s; }
+.dot:nth-child(2) { animation-delay: -0.16s; }
+
+@keyframes bounce {
+  0%, 80%, 100% { transform: scale(0); }
+  40% { transform: scale(1); }
+}
+
+/* MOBILE RESPONSIVE */
+@media (max-width: 480px) {
+  .container {
+    padding: 0 12px;
+    margin: 10px auto;
+  }
+  
+  .card {
+    padding: 20px 16px;
+  }
+  
+  .buttons {
+    flex-direction: column;
+  }
+  
+  .status h2 {
+    font-size: 20px;
+  }
+  
+  .amount {
+    font-size: 32px;
+  }
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <a href="index.html">‹</a>
+  <h1>Payment Status</h1>
+</div>
+
+<div class="container">
+
+  <!-- STATUS CARD -->
+  <div class="card status">
+    <div class="status-icon">
+      <i class="fas fa-clock"></i>
+    </div>
+    <h2>Payment Pending</h2>
+    <p>Your payment is being verified<span class="loading-dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span></p>
+    <p>Please do not refresh the page</p>
+    <div class="order-id" id="orderId">Order ID: --</div>
+  </div>
+
+  <!-- ALERT BOX -->
+  <div class="card">
+    <div class="alert-box">
+      <div class="alert-row">
+        <div class="alert-icon"><i class="fas fa-exclamation-triangle"></i></div>
+        <div class="alert-text">Payment could not be completed successfully.</div>
+      </div>
+      <div class="alert-row">
+        <div class="alert-icon"><i class="fas fa-history"></i></div>
+        <div class="alert-text">If amount is debited, it will be refunded automatically within 3-7 working days.</div>
+      </div>
+      <div class="alert-row">
+        <div class="alert-icon"><i class="fas fa-check-circle"></i></div>
+        <div class="alert-text"><b>Refund will be processed within 72 hours to your original payment method.</b></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AMOUNT CARD -->
+  <div class="card amount-card">
+    <h3>Refund Amount</h3>
+    <div class="amount"><span id="amount">₹0</span></div>
+    <p class="details" id="method">Payment Method: --</p>
+    <p class="details" id="time">Time: --</p>
+    <p class="details" style="color: #388e3c; margin-top: 8px;">
+      <i class="fas fa-shield-alt"></i> 100% Safe & Secure Payment
+    </p>
+  </div>
+
+  <!-- BUTTONS -->
+  <div class="buttons">
+    <a href="index.html" class="btn btn-primary">
+      <i class="fas fa-shopping-bag"></i> CONTINUE SHOPPING
+    </a>
+    <button class="btn btn-secondary" id="retryBtn">
+      <i class="fas fa-redo"></i> RETRY PAYMENT
+    </button>
+  </div>
+
+  <div class="footer">
+    <p>Need help? <a href="#">Contact Us</a> | <a href="#">FAQ</a></p>
+    <p style="margin-top: 8px;">© 2024 Flipkart.com. All rights reserved.</p>
+  </div>
+
+</div>
+
+<script>
+const PRODUCTS_API = "/api/products";
+
+// Get URL parameters
+
+const params = new URLSearchParams(window.location.search);
+const productId = params.get("id");
+const method = params.get("method") || "UPI";
+
+// Generate IDs
+const orderId = "OD" + Date.now();
+const txnId = "TXN" + Math.floor(Math.random() * 1e9);
+
+// Update UI with order details
+document.getElementById("orderId").innerText = "Order ID: " + orderId;
+document.getElementById("method").innerText = "Payment Method: " + method;
+document.getElementById("time").innerText = "Time: " + new Date().toLocaleString('en-IN', {
+  day: '2-digit',
+  month: 'short',
+  year: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: true
+});
+
+// Fetch product details and update amount
+async function loadAmount() {
+  if (!productId) return;
+
+  try {
+    const response = await fetch(PRODUCTS_API);
+    const data = await response.json();
+
+    const product = data.data.find(x => 
+      String(x.id) === String(productId) || 
+      String(x._id) === String(productId)
+    );
+    
+    if (!product) return;
+
+    const price = product.discounted_price || product.price || 0;
+    document.getElementById("amount").innerText = "₹" + price.toLocaleString('en-IN');
+
+    // Save order to localStorage
+    savePendingOrder(product.name, price, product.main_image || product.image);
+    
+  } catch (error) {
+    console.error("Error loading product:", error);
+  }
+}
+
+// Save pending order to localStorage
+function savePendingOrder(name, price, img) {
+  const orders = JSON.parse(localStorage.getItem("userOrders") || "[]");
+  
+  orders.unshift({
+    orderId: orderId,
+    txnId: txnId,
+    name: name,
+    amount: price,
+    image: img,
+    status: "pending",
+    refund: "72 hours",
+    date: new Date().toISOString(),
+    method: method
+  });
+  
+  // Keep only last 50 orders
+  localStorage.setItem("userOrders", JSON.stringify(orders.slice(0, 50)));
+  
+  // Also save to pending orders
+  const pending = JSON.parse(localStorage.getItem("pendingOrders") || "[]");
+  pending.push({
+    orderId: orderId,
+    productId: productId,
+    amount: price,
+    date: new Date().toISOString()
+  });
+  localStorage.setItem("pendingOrders", JSON.stringify(pending.slice(0, 20)));
+}
+
+// Retry payment button
+document.getElementById("retryBtn").onclick = () => {
+  if (productId) {
+    window.location.href = `payment.html?id=${productId}&method=${method}`;
+  } else {
+    window.location.href = "payment.html";
+  }
+};
+
+function checkPaymentStatus() {
+  console.log("Checking payment status for:", orderId);
+}
+
+setTimeout(checkPaymentStatus, 5000);
+
+loadAmount();
+</script>
+
+</body>
+</html>

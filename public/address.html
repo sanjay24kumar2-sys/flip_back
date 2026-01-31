@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Add Delivery Address</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+*{
+    box-sizing:border-box;
+    font-family:Arial, sans-serif;
+}
+
+body{
+    margin:0;
+    background:#f1f3f6;
+}
+
+.wrapper{
+    min-height:100vh;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    padding:16px;
+}
+
+.container{
+    width:100%;
+    max-width:420px;
+    background:#fff;
+    border-radius:8px;
+    padding:16px;
+    box-shadow:0 2px 10px rgba(0,0,0,0.1);
+}
+
+.header{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    margin-bottom:16px;
+}
+
+.back-btn{
+    background:none;
+    border:none;
+    font-size:20px;
+    cursor:pointer;
+    color:#2874f0;
+}
+
+.header h1{
+    font-size:20px;
+    color:#2874f0;
+    margin:0;
+}
+
+.flipkart-logo{ font-weight:bold; }
+.plus{
+    color:#ff6161;
+    background:#f0f0f0;
+    padding:2px 6px;
+    border-radius:4px;
+    font-size:12px;
+    font-weight:bold;
+}
+
+h2{
+    font-size:18px;
+    margin-bottom:16px;
+    color:#212121;
+}
+
+input{
+    width:100%;
+    padding:12px;
+    margin-bottom:12px;
+    border:1px solid #dcdcdc;
+    border-radius:6px;
+    font-size:14px;
+}
+
+input:focus{
+    outline:none;
+    border-color:#2874f0;
+}
+
+.row{
+    display:flex;
+    gap:10px;
+}
+
+.row input{ width:100%; }
+
+.error-message{
+    color:#ff6161;
+    font-size:12px;
+    margin-top:-8px;
+    margin-bottom:12px;
+    display:none;
+}
+
+.address-type-title{
+    font-size:14px;
+    margin:10px 0 6px;
+}
+
+.address-type{
+    display:flex;
+    gap:10px;
+    margin-bottom:16px;
+}
+
+.address-type button{
+    flex:1;
+    padding:10px;
+    border-radius:6px;
+    border:1px solid #ccc;
+    background:#fff;
+    cursor:pointer;
+}
+
+.address-type button.active{
+    border-color:#2874f0;
+    color:#2874f0;
+    background:#f0f5ff;
+    font-weight:bold;
+}
+
+.save-btn{
+    width:100%;
+    padding:14px;
+    background:#fb641b;
+    color:white;
+    border:none;
+    border-radius:6px;
+    font-size:16px;
+    font-weight:bold;
+    cursor:pointer;
+}
+
+.save-btn:disabled{
+    background:#ccc;
+    cursor:not-allowed;
+}
+
+.saving{
+    background:#ff9f00 !important;
+}
+</style>
+</head>
+
+<body>
+
+<div class="wrapper">
+<div class="container">
+
+<div class="header">
+    <button class="back-btn" onclick="goBack()">←</button>
+    <h1><span class="flipkart-logo">Flipkart</span><span class="plus">Plus</span></h1>
+</div>
+
+<h2>Add delivery address</h2>
+
+<input id="fullName" placeholder="Full Name *">
+<div class="error-message" id="nameError">Enter valid name</div>
+
+<input id="phoneNumber" placeholder="Phone Number *">
+<div class="error-message" id="phoneError">Enter valid phone</div>
+
+<input id="pincode" placeholder="Pincode *">
+<div class="error-message" id="pincodeError">Enter valid pincode</div>
+
+<div class="row">
+    <input id="state" placeholder="State *">
+    <input id="city" placeholder="City *">
+</div>
+
+<input id="houseNumber" placeholder="House No., Building *">
+<input id="roadArea" placeholder="Road, Area, Colony *">
+
+<div class="address-type-title">Type of address</div>
+<div class="address-type">
+    <button class="active" onclick="setType(this,'home')">Home</button>
+    <button onclick="setType(this,'work')">Work</button>
+    <button onclick="setType(this,'other')">Other</button>
+</div>
+
+<button class="save-btn" id="saveBtn" onclick="saveAddress()">Save Address</button>
+
+</div>
+</div>
+
+<script>
+let addressType = "home";
+let productId = '';
+let productName = '';
+let productPrice = '';
+
+function getProductFromURL() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const name = urlParams.get('name');
+    const price = urlParams.get('price');
+    const id = urlParams.get('id');
+    
+    return {
+        name: name ? decodeURIComponent(name) : '',
+        price: price || '',
+        id: id || ''
+    };
+}
+
+function initProductData() {
+    const product = getProductFromURL();
+    productId = product.id;
+    productName = product.name;
+    productPrice = product.price;
+}
+
+function setType(btn,type){
+    document.querySelectorAll(".address-type button")
+        .forEach(b=>b.classList.remove("active"));
+    btn.classList.add("active");
+    addressType = type;
+}
+
+function navigateToLevelPage() {
+    let levelPageUrl = 'level.html';
+    
+    if (productId) {
+        levelPageUrl += `?id=${encodeURIComponent(productId)}`;
+        
+        if (productName) {
+            levelPageUrl += `&name=${encodeURIComponent(productName)}`;
+        }
+        if (productPrice) {
+            levelPageUrl += `&price=${encodeURIComponent(productPrice)}`;
+        }
+    }
+    
+    window.location.href = levelPageUrl;
+}
+
+function saveAddress(){
+    document.querySelectorAll(".error-message")
+        .forEach(e=>e.style.display="none");
+    
+    const name = document.getElementById('fullName').value.trim();
+    const phone = document.getElementById('phoneNumber').value.trim();
+    const pin = document.getElementById('pincode').value.trim();
+    
+    let isValid = true;
+    
+    if(name.length < 3){
+        document.getElementById('nameError').style.display="block";
+        isValid = false;
+    }
+    if(!/^[6-9]\d{9}$/.test(phone)){
+        document.getElementById('phoneError').style.display="block";
+        isValid = false;
+    }
+    if(!/^\d{6}$/.test(pin)){
+        document.getElementById('pincodeError').style.display="block";
+        isValid = false;
+    }
+    
+    if(!isValid) return;
+    
+    const saveBtn = document.getElementById('saveBtn');
+    saveBtn.disabled = true;
+    saveBtn.classList.add('saving');
+    saveBtn.textContent = "Saving...";
+    
+    const address = {
+        name: name,
+        phone: phone,
+        pin: pin,
+        state: document.getElementById('state').value.trim(),
+        city: document.getElementById('city').value.trim(),
+        house: document.getElementById('houseNumber').value.trim(),
+        road: document.getElementById('roadArea').value.trim(),
+        type: addressType,
+        createdAt: new Date().toISOString()
+    };
+    
+    localStorage.setItem("userAddress", JSON.stringify(address));
+    localStorage.setItem("isAddressSet", "true");
+    
+    if (productId) {
+        localStorage.setItem("currentProductId", productId);
+    }
+    
+    saveBtn.textContent = "Saved!";
+
+    setTimeout(() => {
+        navigateToLevelPage();
+    }, 800);
+}
+
+document.getElementById('pincode').addEventListener("blur", function(){
+    const pin = this.value;
+    if(pin.startsWith("40")){
+        document.getElementById('city').value = "Mumbai";
+        document.getElementById('state').value = "Maharashtra";
+    } else if(pin.startsWith("11")){
+        document.getElementById('city').value = "Delhi";
+        document.getElementById('state').value = "Delhi";
+    } else if(pin.startsWith("56")){
+        document.getElementById('city').value = "Bangalore";
+        document.getElementById('state').value = "Karnataka";
+    } else if(pin.startsWith("70")){
+        document.getElementById('city').value = "Chennai";
+        document.getElementById('state').value = "Tamil Nadu";
+    } else if(pin.startsWith("30")){
+        document.getElementById('city').value = "Jaipur";
+        document.getElementById('state').value = "Rajasthan";
+    }
+});
+
+function goBack() {
+    window.history.back();
+}
+
+window.addEventListener('DOMContentLoaded', function() {
+    initProductData();
+    
+    document.getElementById('fullName').focus();
+});
+</script>
+
+</body>
+</html>
